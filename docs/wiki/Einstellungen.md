@@ -45,6 +45,15 @@ Gerätenamen anzeigen: `python soundboard.py --list` – bei Gerätenamen reicht
 | `WEB_PORT` | `8765` | Port der Oberfläche |
 | `OPEN_BROWSER` | `True` | Browser beim Start öffnen |
 
+## Updates
+
+| Option | Standard | Bedeutung |
+|---|---|---|
+| `CHECK_UPDATES` | `True` | beim Start und alle 12 Stunden bei GitHub nach einer neuen Version fragen |
+| `UPDATE_INTERVAL` | `43200` | Sekunden zwischen zwei Prüfungen (12 Stunden) |
+
+Gibt es eine neuere Version, erscheint oben in der Oberfläche ein grüner Hinweis mit Download-Link (pro Version ausblendbar), außerdem ein Eintrag im Einrichtungs-Check und in der Konsole. **Installiert wird nichts automatisch.**
+
 ## Desktopverknüpfung (`wardogs_start.pyw`)
 
 | Option | Standard | Bedeutung |

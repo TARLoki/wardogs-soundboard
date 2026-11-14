@@ -120,6 +120,12 @@
   .banner.show { display: flex; }
   .banner.warn { border-color: #5a4720; background: #2a2416; }
   .banner a { color: var(--accent); font-weight: 600; }
+  .updbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; border: 1px solid #2f5a3a; background: #17271c;
+    border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; }
+  .updbar[hidden] { display: none; }
+  .updbar span { flex: 1; min-width: 12em; }
+  .updbar a { color: #7fd38f; font-weight: 600; }
+  .updbar button { padding: 2px 9px; background: transparent; border-color: transparent; color: var(--muted); font-size: 16px; }
 
   /* Anleitung */
   .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
@@ -178,6 +184,12 @@
     <a href="#" data-view="board" class="active">Soundboard</a>
     <a href="#anleitung" data-view="guide">Anleitung <span class="dot" id="issueDot"></span></a>
   </nav>
+
+  <div class="updbar" id="updBar" hidden>
+    <span>🔔 Neue Version <b id="updVer"></b> verfügbar (installiert: <span id="updCur"></span>).</span>
+    <a id="updLink" href="#" target="_blank" rel="noopener">Zum Download →</a>
+    <button type="button" id="updClose" title="Für diese Version ausblenden">✕</button>
+  </div>
 
   <section id="viewBoard">
   <div class="banner" id="banner">
@@ -326,6 +338,8 @@ python -m pip install -r requirements.txt</pre>
       <ul class="step" style="display:block;padding-left:18px;margin:0">
         <li>Numpad <b>0–9 , / * - + Num</b>: Sound abspielen, gleiche Taste nochmal: stoppen</li>
         <li>Numpad <b>Enter</b>: alles stoppen</li>
+        <li>Neue Versionen: Das Soundboard fragt beim Start und alle 12 Stunden bei GitHub nach und zeigt oben einen Hinweis
+          mit Download-Link. Installiert wird nichts automatisch. Abschalten: <code>CHECK_UPDATES = False</code>.</li>
         <li>Lautstärke und „Ordner neu laden“: in der Soundboard-Ansicht. Über 100 % wird verstärkt,
           ein Soft-Limiter verhindert dabei hartes Übersteuern. Leise Sounds werden beim Laden automatisch angehoben.</li>
         <li>Bedienung vom Handy: in <code>soundboard.py</code> <code>WEB_HOST = "0.0.0.0"</code> setzen, dann
@@ -457,8 +471,10 @@ function render() {
   volText.classList.toggle('boost', state.volume > 1);
   document.getElementById('volNote').classList.toggle('hot', state.volume >= 1.5);
   volText.textContent = Math.round(state.volume * 100) + ' %';
-  document.getElementById('version').textContent = state.version ? 'v' + state.version : '';
+  document.getElementById('version').textContent = (state.version ? 'v' + state.version : '') +
+    (state.update ? ` · Update ${state.update.version} verfügbar` : '');
   renderBanner();
+  renderUpdate();
 
   // Raster nur neu aufbauen, wenn sich die Belegung geändert hat
   const key = JSON.stringify(state.slots);
@@ -789,6 +805,22 @@ function showView() {
 window.addEventListener('hashchange', showView);
 document.querySelector('.tabs a[data-view="board"]').addEventListener('click', e => {
   e.preventDefault(); history.pushState('', '', location.pathname); showView();
+});
+
+// ---------- Update-Hinweis ----------
+function dismissedUpdate() { try { return localStorage.getItem('updDismissed'); } catch { return null; } }
+function renderUpdate() {
+  const bar = document.getElementById('updBar');
+  const u = state.update;
+  if (!u || dismissedUpdate() === u.version) { bar.hidden = true; return; }
+  document.getElementById('updVer').textContent = u.version;
+  document.getElementById('updCur').textContent = state.version;
+  document.getElementById('updLink').href = u.url;
+  bar.hidden = false;
+}
+document.getElementById('updClose').addEventListener('click', () => {
+  try { localStorage.setItem('updDismissed', state.update.version); } catch {}
+  document.getElementById('updBar').hidden = true;
 });
 
 // ---------- Hinweis-Banner ----------

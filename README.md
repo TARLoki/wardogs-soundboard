@@ -23,6 +23,7 @@ A soundboard for the proximity voice chat in **WARDOGS** (Bulkhead) – meme sou
 - **Push-to-Talk automatisch:** hält beim Abspielen die Sprechtaste (Standard `K`) gedrückt – nur wenn WARDOGS das aktive Fenster ist
 - **Einrichtungs-Check** mit Schritt-für-Schritt-Anleitung direkt in der Oberfläche
 - **Desktopverknüpfung**, die Soundboard und WARDOGS zusammen startet und das Soundboard nach dem Spiel beendet
+- **Update-Hinweis**, sobald hier eine neue Version erscheint (nur Hinweis, keine automatische Installation)
 
 ### So funktioniert es
 
@@ -69,6 +70,7 @@ Das Spiel wird **nicht verändert** – keine Dateien, kein Speicherzugriff. Das
 - **Automatic push-to-talk:** holds your voice key (default `K`) while a sound plays – only while WARDOGS is the active window
 - **Setup check** with a step-by-step guide built into the interface
 - **Desktop shortcut** that starts the soundboard and WARDOGS together and closes the soundboard after the game
+- **Update notice** when a new release is published here (notice only, nothing is installed automatically)
 
 > The user interface and the detailed guide are currently **German only**. See the [English wiki page](https://github.com/TARLoki/wardogs-soundboard/wiki/English) for a short guide.
 

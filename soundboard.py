@@ -29,6 +29,11 @@ Einrichtung:
   Beim Start prüft das Tool VB-Cable, Mikrofon, Ausgabe und Hotkeys. Fehlt etwas,
   öffnet sich die Weboberfläche mit der Anleitung (Menüpunkt "Anleitung").
 
+Updates:
+  Beim Start und alle 12 Stunden fragt das Tool bei GitHub die neueste Version ab und
+  zeigt einen Hinweis mit Download-Link. Installiert wird nichts automatisch.
+  Abschalten: CHECK_UPDATES = False.
+
 Platzbelegung:
   Dateien mit Präfix landen fest auf diesem Platz, z. B. "3_leeroy.mp3",
   "0_...", "komma_...", "geteilt_...", "mal_...", "minus_...", "plus_...", "num_...".
@@ -118,6 +123,11 @@ CONSOLE_TITLE = "WARDOGS Soundboard"   # Fenstertitel (wird vom Startskript zum 
 WEB_HOST = "127.0.0.1"         # "0.0.0.0" = auch vom Handy im Heimnetz erreichbar
 WEB_PORT = 8765
 OPEN_BROWSER = True
+
+CHECK_UPDATES = True           # bei GitHub nachsehen, ob es eine neuere Version gibt
+UPDATE_REPO = "TARLoki/wardogs-soundboard"
+UPDATE_URL = f"https://api.github.com/repos/{UPDATE_REPO}/releases/latest"
+UPDATE_INTERVAL = 12 * 3600    # Sekunden zwischen zwei Prüfungen
 
 SAMPLE_RATE = 48000
 BLOCK = 480                    # 10 ms
@@ -350,7 +360,7 @@ class PushToTalk:
 
 class Setup:
     """Sammelt die Prüfergebnisse. status: ok | warn | error | info"""
-    ORDER = ["python", "packages", "cable", "monitor", "mic", "audio", "hotkeys", "sounds"]
+    ORDER = ["python", "packages", "cable", "monitor", "mic", "audio", "hotkeys", "sounds", "update"]
 
     def __init__(self):
         self.items = {}
@@ -840,6 +850,7 @@ class Board:
             "setup_issues": self.setup.issues(),
             "volume": self.volume,
             "max_volume": MAX_VOLUME,
+            "update": update_state(),
             "playing": self.cable.active_slots(),
             "slots": [
                 {"slot": i + 1,
@@ -909,6 +920,60 @@ def download_sound(url: str):
 # ----------------------------------------------------------------------
 
 QUIT = threading.Event()
+
+
+# ----------------------------------------------------------------------
+# Update-Prüfung (nur Hinweis, es wird nichts automatisch installiert)
+# ----------------------------------------------------------------------
+
+UPDATE = {"latest": None, "url": None, "checked": None, "error": None}
+
+
+def version_tuple(v: str):
+    nums = re.findall(r"\d+", v or "")
+    return tuple(int(n) for n in nums[:4]) if nums else ()
+
+
+def check_update(setup=None):
+    """Neueste Version bei GitHub abfragen. Gibt True zurück, wenn eine neuere existiert."""
+    try:
+        req = urllib.request.Request(UPDATE_URL, headers={
+            "User-Agent": f"WARDOGS-Soundboard/{VERSION}", "Accept": "application/vnd.github+json"})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            data = json.loads(r.read(512 * 1024).decode("utf-8"))
+        tag = str(data.get("tag_name") or "")
+        url = str(data.get("html_url") or f"https://github.com/{UPDATE_REPO}/releases/latest")
+        if not url.startswith("https://github.com/"):
+            url = f"https://github.com/{UPDATE_REPO}/releases/latest"
+        UPDATE.update(latest=tag.lstrip("vV") or None, url=url, checked=time.time(), error=None)
+    except Exception as e:
+        UPDATE.update(checked=time.time(), error=str(e))
+        if setup:
+            setup.set("update", "info", "Update-Prüfung nicht möglich",
+                      "GitHub war nicht erreichbar – das Soundboard funktioniert trotzdem.")
+        return False
+    newer = bool(UPDATE["latest"]) and version_tuple(UPDATE["latest"]) > version_tuple(VERSION)
+    if setup:
+        if newer:
+            setup.set("update", "info", f"Neue Version {UPDATE['latest']} verfügbar",
+                      f"Installiert ist {VERSION}. Download: {UPDATE['url']}")
+        else:
+            setup.set("update", "ok", f"Version {VERSION} ist aktuell")
+    return newer
+
+
+def update_state():
+    newer = bool(UPDATE["latest"]) and version_tuple(UPDATE["latest"]) > version_tuple(VERSION)
+    return {"version": UPDATE["latest"], "url": UPDATE["url"]} if newer else None
+
+
+def update_loop(setup):
+    while True:
+        if check_update(setup):
+            print(f"\n*** Neue Version {UPDATE['latest']} verfügbar (installiert: {VERSION}) ***")
+            print(f"    Download: {UPDATE['url']}\n")
+        if QUIT.wait(UPDATE_INTERVAL):
+            return
 
 
 class WebServer(ThreadingHTTPServer):
@@ -1162,6 +1227,10 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     url = f"http://localhost:{WEB_PORT}"
     print(f"Weboberfläche: {url}")
+    if CHECK_UPDATES:
+        threading.Thread(target=update_loop, args=(board.setup,), daemon=True).start()
+    else:
+        board.setup.set("update", "info", "Update-Prüfung ist ausgeschaltet", "CHECK_UPDATES = False")
     if OPEN_BROWSER and "--no-browser" not in sys.argv:
         webbrowser.open(url + ("#anleitung" if board.setup.issues() and not board.audio_ready else ""))
 
