@@ -1,0 +1,647 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WARDOGS Soundboard</title>
+<style>
+  :root {
+    --bg: #14161a; --panel: #1d2026; --tile: #252931; --tile-hi: #2e333d;
+    --line: #353b46; --text: #e8e6e1; --muted: #8b919c;
+    --accent: #e0a23a; --accent-ink: #1a1408; --danger: #d9534f; --ok: #5cb85c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--text);
+    font: 15px/1.4 "Segoe UI", system-ui, sans-serif; }
+  main { max-width: 720px; margin: 0 auto; padding: 20px 16px 40px; }
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+  h1 { font-size: 20px; letter-spacing: .12em; text-transform: uppercase; margin: 0; }
+  h1 span { color: var(--accent); }
+  .status { font-size: 13px; color: var(--muted); }
+  .status.err { color: var(--danger); }
+
+  .bar { display: flex; align-items: center; gap: 12px; background: var(--panel);
+    border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; flex-wrap: wrap; }
+  .bar label { color: var(--muted); font-size: 13px; }
+  .bar input[type=range] { flex: 1; min-width: 120px; accent-color: var(--accent); }
+  .volnote { flex-basis: 100%; margin: 0; font-size: 12px; color: var(--muted); }
+  .volnote.hot { color: var(--accent); }
+  .vol.boost { color: var(--accent); font-weight: 600; }
+  .vol { width: 3.6em; text-align: right; font-variant-numeric: tabular-nums; }
+  button { font: inherit; color: var(--text); background: var(--tile); border: 1px solid var(--line);
+    border-radius: 8px; padding: 7px 14px; cursor: pointer; }
+  button:hover { background: var(--tile-hi); }
+  button.stop { background: var(--danger); border-color: var(--danger); color: #fff; font-weight: 600; }
+
+  .grid { display: grid; grid-template-columns: repeat(4, 1fr); grid-auto-rows: minmax(104px, auto); gap: 10px; }
+  .tile { position: relative; background: var(--tile); border: 1px solid var(--line);
+    border-radius: 12px; padding: 12px; cursor: pointer; display: flex; flex-direction: column;
+    justify-content: space-between; user-select: none; transition: background .1s, transform .05s, border-color .1s; }
+  .tile:hover { background: var(--tile-hi); }
+  .tile:active { transform: scale(.98); }
+  .tile.empty { cursor: default; border-style: dashed; background: transparent; }
+  .tile.playing { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
+  .tile.drop { border-color: var(--ok); border-style: solid; background: #1f2a20; }
+  .tile.tall { grid-row: span 2; }
+  .tile.wide { grid-column: span 2; }
+  .tile.stopkey { background: #3a1f1f; border-color: #5a2a2a; justify-content: center; align-items: center;
+    gap: 4px; text-align: center; }
+  .tile.stopkey:hover { background: #4a2626; }
+  .tile.stopkey .num { color: var(--danger); font-size: 22px; }
+  .num { font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1; }
+  .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word; }
+  .meta { font-size: 12px; color: var(--muted); }
+  .edit { position: absolute; top: 8px; right: 8px; padding: 2px 8px; font-size: 13px; color: var(--muted);
+    background: transparent; border-color: transparent; }
+  .edit:hover { border-color: var(--line); color: var(--text); }
+
+  dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px;
+    padding: 18px; width: min(480px, calc(100vw - 32px)); }
+  dialog::backdrop { background: rgba(0,0,0,.6); }
+  dialog h2 { margin: 0 0 4px; font-size: 17px; }
+  dialog p { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+  dialog label { display: block; font-size: 13px; font-weight: 600; margin: 12px 0 5px; }
+  dialog .sub { font-weight: 400; color: var(--muted); }
+  dialog .fieldhint { font-size: 12px; color: var(--muted); margin: 5px 0 0; }
+  dialog input[type=text] { width: 100%; font: inherit; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; }
+  .row { display: flex; gap: 8px; justify-content: flex-end; margin-top: 14px; flex-wrap: wrap; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .hint { margin-top: 18px; font-size: 13px; color: var(--muted); }
+  .hint b { color: var(--text); font-weight: 600; }
+  .version { text-align: right; font-size: 12px; color: var(--muted); margin-top: 8px; font-variant-numeric: tabular-nums; }
+
+  /* Menü */
+  .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); margin: -4px 0 16px; }
+  .tabs a { color: var(--muted); text-decoration: none; padding: 8px 14px; border-bottom: 2px solid transparent;
+    margin-bottom: -1px; font-weight: 600; display: inline-flex; align-items: center; gap: 6px; }
+  .tabs a:hover { color: var(--text); }
+  .tabs a.active { color: var(--text); border-bottom-color: var(--accent); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--danger); display: none; }
+  .dot.show { display: inline-block; }
+  .dot.warn { background: var(--accent); }
+
+  .banner { display: none; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+    border: 1px solid #5a2a2a; background: #2a1a1a; border-radius: 10px; padding: 10px 14px; margin-bottom: 16px; font-size: 14px; }
+  .banner.show { display: flex; }
+  .banner.warn { border-color: #5a4720; background: #2a2416; }
+  .banner a { color: var(--accent); font-weight: 600; }
+
+  /* Anleitung */
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 16px; margin-bottom: 14px; }
+  .card h2 { font-size: 16px; margin: 0 0 10px; }
+  .checks { list-style: none; margin: 0 0 12px; padding: 0; }
+  .checks li { display: grid; grid-template-columns: 22px 1fr; gap: 2px 8px; padding: 7px 0; border-top: 1px solid var(--line); }
+  .checks li:first-child { border-top: 0; }
+  .checks .lbl { font-weight: 600; }
+  .checks .det { grid-column: 2; font-size: 13px; color: var(--muted); word-break: break-word; }
+  .ico { font-weight: 700; text-align: center; }
+  .s-ok { color: var(--ok); } .s-warn { color: var(--accent); } .s-error { color: var(--danger); } .s-info { color: var(--muted); }
+  .step { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 0 12px; }
+  .step > div { min-width: 0; }
+  button:disabled { opacity: .45; cursor: not-allowed; }
+  .step .no { width: 30px; height: 30px; border-radius: 50%; background: var(--tile); border: 1px solid var(--line);
+    display: grid; place-items: center; font-weight: 700; color: var(--accent); }
+  .step h3 { font-size: 15px; margin: 4px 0 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .step p, .step li { font-size: 14px; color: #cfcdc8; margin: 0 0 6px; }
+  .step ol, .step ul { margin: 0 0 6px; padding-left: 18px; }
+  .chip { font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; border: 1px solid currentColor; }
+  .chip:empty { display: none; }
+  .manual { color: var(--muted); }
+  code { font-family: Consolas, "Cascadia Mono", monospace; font-size: 13px; background: var(--bg);
+    border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; overflow-wrap: anywhere; }
+  pre { margin: 4px 0 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+    overflow-x: auto; font: 13px/1.5 Consolas, "Cascadia Mono", monospace; }
+  .note { font-size: 13px; color: var(--muted); }
+  .note b { color: var(--text); }
+  details { border-top: 1px solid var(--line); padding: 8px 0; }
+  details:first-of-type { border-top: 0; }
+  summary { cursor: pointer; font-weight: 600; font-size: 14px; }
+  details p { font-size: 14px; color: #cfcdc8; margin: 6px 0 0; }
+  a.ext { color: var(--accent); }
+
+  @media (max-width: 520px) {
+    .grid { gap: 6px; grid-auto-rows: minmax(84px, auto); }
+    .tile { padding: 8px; border-radius: 10px; }
+    .num { font-size: 18px; }
+    .name { font-size: 12px; -webkit-line-clamp: 3; }
+    .meta { display: none; }
+    .edit { top: 4px; right: 4px; padding: 0 6px; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Wardogs <span>Soundboard</span></h1>
+    <div class="status" id="status">verbinde …</div>
+  </header>
+
+  <nav class="tabs">
+    <a href="#" data-view="board" class="active">Soundboard</a>
+    <a href="#anleitung" data-view="guide">Anleitung <span class="dot" id="issueDot"></span></a>
+  </nav>
+
+  <section id="viewBoard">
+  <div class="banner" id="banner">
+    <span id="bannerText"></span>
+    <a href="#anleitung">Zur Anleitung →</a>
+  </div>
+
+  <div class="bar">
+    <label for="vol">Lautstärke</label>
+    <input type="range" id="vol" min="0" max="200" step="5">
+    <span class="vol" id="volText"></span>
+    <button class="stop" id="stop" title="Numpad Enter">Stopp</button>
+    <button id="reload">Ordner neu laden</button>
+    <p class="volnote" id="volNote">Bei 150–200 % klingen manche Clips gequetscht oder leicht verzerrt.
+      Das ist der Preis für die Lautstärke – am besten herantasten.</p>
+  </div>
+
+  <div class="grid" id="grid"></div>
+
+  <p class="hint">
+    Klick spielt ab, nochmal klicken stoppt. Über <b>✎</b> einen Myinstants-Link auf den Platz legen
+    oder eine Datei direkt auf eine Kachel ziehen. Ersetzte Sounds landen in <b>sounds/_alt</b>.
+  </p>
+  </section>
+
+  <section id="viewGuide" hidden>
+    <div class="card">
+      <h2>Einrichtungs-Check</h2>
+      <ul class="checks" id="checks"><li><span></span><span class="det">wird geprüft …</span></li></ul>
+      <div class="row" style="justify-content:flex-start">
+        <button id="recheck">Erneut prüfen</button>
+        <button id="testTone" class="primary">Testton abspielen</button>
+      </div>
+      <p class="note" style="margin:10px 0 0">Der Testton geht ohne Push-to-Talk ins Kabel. In <code>mmsys.cpl</code> → Aufnahme
+        muss sich dabei der Pegel bei <b>CABLE Output</b> bewegen.</p>
+    </div>
+
+    <div class="card">
+      <h2>Einrichtung Schritt für Schritt</h2>
+
+      <div class="step"><div class="no">1</div><div>
+        <h3>Python installieren <span class="chip" data-check="python"></span></h3>
+        <p>Installer von <a class="ext" href="https://www.python.org/downloads/" target="_blank" rel="noopener">python.org/downloads</a> laden.
+          Im ersten Fenster unten <b>„Add python.exe to PATH“</b> anhaken, dann „Install Now“.</p>
+        <p class="note">Danach ein <b>neues</b> Terminal öffnen und mit <code>python --version</code> prüfen.</p>
+      </div></div>
+
+      <div class="step"><div class="no">2</div><div>
+        <h3>Pakete installieren <span class="chip" data-check="packages"></span></h3>
+        <p>Im Terminal (PowerShell):</p>
+        <pre>cd "<span data-cfg="folder"></span>"
+python -m pip install -r requirements.txt</pre>
+      </div></div>
+
+      <div class="step"><div class="no">3</div><div>
+        <h3>VB-Cable installieren <span class="chip" data-check="cable"></span></h3>
+        <ol>
+          <li><a class="ext" href="https://vb-audio.com/Cable/" target="_blank" rel="noopener">vb-audio.com/Cable</a> öffnen und das ZIP für Windows laden.</li>
+          <li>ZIP entpacken, <code>VBCABLE_Setup_x64.exe</code> per Rechtsklick <b>„Als Administrator ausführen“</b>.</li>
+          <li>„Install Driver“ klicken und den <b>Rechner neu starten</b>.</li>
+        </ol>
+        <p class="note">Danach gibt es das Wiedergabegerät <b>CABLE Input</b> und das Aufnahmegerät <b>CABLE Output</b>.</p>
+      </div></div>
+
+      <div class="step"><div class="no">4</div><div>
+        <h3>Windows-Ausgabe prüfen <span class="chip" data-check="monitor"></span></h3>
+        <p><code>Win + R</code> → <code>mmsys.cpl</code> → Reiter <b>Wiedergabe</b>: dein <b>Headset</b> muss Standardgerät sein,
+          <b>nicht</b> CABLE Input. VB-Cable stellt sich bei der Installation gern selbst als Standard ein.</p>
+      </div></div>
+
+      <div class="step"><div class="no">5</div><div>
+        <h3>Mikrofon im Soundboard <span class="chip" data-check="mic"></span></h3>
+        <p>Das Soundboard nimmt dein Mikrofon auf und reicht es zusammen mit den Sounds ins Kabel weiter.
+          Verwendet wird: <b><span data-cfg="mic_device"></span></b>. Ein bestimmtes Mikrofon legst du oben in <code>soundboard.py</code>
+          bei <code>MIC_DEVICE</code> fest, z. B. <code>MIC_DEVICE = "QuadCast"</code> – ein Namensteil reicht.</p>
+        <p class="note">Alle Gerätenamen zeigt <code>python soundboard.py --list</code>.</p>
+      </div></div>
+
+      <div class="step"><div class="no">6</div><div>
+        <h3>Soundboard starten <span class="chip" data-check="audio"></span> <span class="chip" data-check="hotkeys"></span></h3>
+        <p><code>start.bat</code> doppelklicken oder <code>python soundboard.py</code>. Das Konsolenfenster <b>offen lassen</b>,
+          solange du spielst – sonst hört dich im Spiel niemand.</p>
+        <p class="note">Reagiert das Numpad im Spiel nicht: Soundboard <b>als Administrator</b> starten.</p>
+      </div></div>
+
+      <div class="step"><div class="no">7</div><div>
+        <h3>WARDOGS einstellen <span class="chip manual">manuell</span></h3>
+        <ul>
+          <li>Mikrofon / Eingabegerät: <b>CABLE Output (VB-Audio Virtual Cable)</b></li>
+          <li>Ausgabe: dein <b>Headset</b> (unverändert)</li>
+          <li>Push-to-Talk: das Soundboard hält beim Abspielen automatisch
+            <b>„<span data-cfg="ptt_key"></span>“</b> gedrückt – aber nur, wenn ein Fenster mit
+            „<span data-cfg="ptt_window"></span>“ im Titel aktiv ist.</li>
+        </ul>
+        <p class="note">Steht in der Konsole <i>„PTT übersprungen, aktives Fenster: …“</i>, den dort genannten Titel in
+          <code>PTT_WINDOW</code> eintragen. Alternativ im Spiel auf Sprachaktivierung umstellen.</p>
+      </div></div>
+
+      <div class="step"><div class="no">8</div><div>
+        <h3>Discord einstellen <span class="chip manual">manuell</span></h3>
+        <p>Benutzereinstellungen → Sprache &amp; Video → Eingabegerät <b>ausdrücklich</b> auf dein Mikrofon
+          (<span data-cfg="mic_device"></span>) stellen, <b>nicht</b> auf „Default“. Dann hört Discord nur deine Stimme, keine Sounds.</p>
+      </div></div>
+
+      <div class="step"><div class="no">9</div><div>
+        <h3>Sounds belegen <span class="chip" data-check="sounds"></span></h3>
+        <ul>
+          <li>Auf <a class="ext" href="https://www.myinstants.com/" target="_blank" rel="noopener">myinstants.com</a> einen Sound öffnen,
+            Adresse kopieren, im Soundboard auf <b>✎</b> klicken, einfügen, „Laden“.</li>
+          <li>Oder eine WAV/MP3-Datei aus dem Explorer auf eine Kachel ziehen.</li>
+          <li>Oder Dateien in den Ordner <code>sounds</code> legen – Präfix bestimmt die Taste:
+            <code>1_</code>…<code>9_</code>, <code>0_</code>, <code>komma_</code>, <code>geteilt_</code>, <code>mal_</code>,
+            <code>minus_</code>, <code>plus_</code>, <code>num_</code>.</li>
+          <li>Titel: über <b>✎</b> frei überschreibbar. Leer = automatisch (Myinstants-Seitentitel,
+            Datei-Metadaten oder Dateiname). Wird der Sound getauscht, gilt wieder der automatische Titel.</li>
+        </ul>
+      </div></div>
+
+      <div class="step"><div class="no">10</div><div>
+        <h3>Testen <span class="chip manual">manuell</span></h3>
+        <ol>
+          <li>Oben „Testton abspielen“ – du hörst ihn leise im Headset.</li>
+          <li><code>mmsys.cpl</code> → Reiter <b>Aufnahme</b> → der Pegel bei CABLE Output bewegt sich beim Testton und beim Sprechen.</li>
+          <li>Im Spiel einen Mitspieler fragen, ob Stimme und Sounds ankommen.</li>
+        </ol>
+      </div></div>
+
+      <div class="step"><div class="no">11</div><div>
+        <h3>Desktopverknüpfung <span class="chip manual">optional</span></h3>
+        <p><code>verknuepfung_anlegen.py</code> im Soundboard-Ordner doppelklicken. Auf dem Desktop erscheint
+          <b>„WARDOGS + Soundboard“</b> mit dem WARDOGS-Symbol.</p>
+        <ul>
+          <li>Startet das Soundboard <b>minimiert</b> in der Taskleiste (ohne Browser), danach WARDOGS über Steam.</li>
+          <li>Läuft das Soundboard schon, wird es nicht doppelt gestartet.</li>
+          <li>Wird WARDOGS geschlossen, beendet sich das Soundboard nach ca. 20 Sekunden von selbst.</li>
+          <li>Die Oberfläche erreichst du über ein Lesezeichen auf <code>http://localhost:8765</code>.</li>
+        </ul>
+        <p class="note">Klappt etwas nicht, steht in <code>launcher.log</code> im Soundboard-Ordner, was passiert ist.</p>
+      </div></div>
+    </div>
+
+    <div class="card">
+      <h2>Bedienung</h2>
+      <ul class="step" style="display:block;padding-left:18px;margin:0">
+        <li>Numpad <b>0–9 , / * - + Num</b>: Sound abspielen, gleiche Taste nochmal: stoppen</li>
+        <li>Numpad <b>Enter</b>: alles stoppen</li>
+        <li>Lautstärke und „Ordner neu laden“: in der Soundboard-Ansicht. Über 100 % wird verstärkt,
+          ein Soft-Limiter verhindert dabei hartes Übersteuern. Leise Sounds werden beim Laden automatisch angehoben.</li>
+        <li>Bedienung vom Handy: in <code>soundboard.py</code> <code>WEB_HOST = "0.0.0.0"</code> setzen, dann
+          <code>http://&lt;PC-IP&gt;:8765</code> im Handy-Browser öffnen</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h2>Fehlerbehebung</h2>
+      <details><summary>„Python wurde nicht gefunden“</summary>
+        <p>Python ist nicht installiert oder nicht im PATH. Neu installieren mit Häkchen „Add python.exe to PATH“, danach neues Terminal öffnen.</p></details>
+      <details><summary>„No module named …“</summary>
+        <p>Pakete fehlen: Schritt 2 im Ordner des Soundboards ausführen. <code>python -m pip</code> statt <code>pip</code> verwenden.</p></details>
+      <details><summary>„Smart App Control hat eine Datei blockiert“</summary>
+        <p>Rechtsklick auf die heruntergeladene <b>ZIP</b> → Eigenschaften → „Zulassen“ → neu entpacken. Oder direkt
+          <code>python soundboard.py</code> starten.</p></details>
+      <details><summary>Im Spiel hört niemand die Sounds</summary>
+        <p>Mikrofon im Spiel muss CABLE Output sein (Schritt 7). Bei Push-to-Talk prüfen, ob die Konsole „PTT übersprungen“ meldet.
+          Pegel mit dem Testton prüfen (Schritt 10).</p></details>
+      <details><summary>Im Spiel hört mich niemand mehr sprechen</summary>
+        <p>Das Soundboard muss laufen, und im Check muss „Mikrofon gefunden“ grün sein. Ohne Soundboard kommt über CABLE Output nichts an.</p></details>
+      <details><summary>Discord überträgt die Sounds mit</summary>
+        <p>Discord-Eingabe steht auf CABLE Output oder „Default“. Ausdrücklich das Mikrofon wählen (Schritt 8).
+          Bei offenem Headset ggf. <code>MONITOR_VOLUME</code> senken.</p></details>
+      <details><summary>Desktopverknüpfung startet das Soundboard nicht</summary>
+        <p><code>launcher.log</code> im Soundboard-Ordner ansehen. Einmal <code>python soundboard.py</code> direkt starten und
+          prüfen, ob dort eine Fehlermeldung erscheint. Wurde der Ordner verschoben, die Verknüpfung neu anlegen.</p></details>
+      <details><summary>Echo oder Pfeifen</summary>
+        <p>Windows-Standardmikrofon oder -ausgabe ist das VB-Cable. Schritt 4 und 5 prüfen.</p></details>
+    </div>
+  </section>
+
+  <div class="version" id="version"></div>
+</main>
+
+<dialog id="dlg">
+  <form method="dialog" id="dlgForm">
+    <h2 id="dlgTitle">Platz</h2>
+    <label for="label">Titel <span class="sub">(optional)</span></label>
+    <input type="text" id="label" maxlength="60" autocomplete="off">
+    <p class="fieldhint" id="labelHint"></p>
+    <label for="url" id="urlLabel">Sound</label>
+    <input type="text" id="url" placeholder="https://www.myinstants.com/de/instant/…" autocomplete="off">
+    <p class="fieldhint">Link einer Myinstants-Seite oder direkter MP3-Link. Ein neuer Sound setzt einen alten eigenen Titel zurück.</p>
+    <div class="row">
+      <button value="cancel" formnovalidate>Abbrechen</button>
+      <button class="primary" id="dlgOk" value="ok">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<script>
+// Per Doppelklick als Datei geöffnet? -> zum laufenden Tool weiterleiten bzw. Hinweis zeigen
+if (location.protocol === 'file:') {
+  const TOOL = 'http://localhost:8765/';
+  document.querySelector('main').innerHTML = `
+    <header><h1>Wardogs <span>Soundboard</span></h1></header>
+    <div class="card" style="margin-top:16px">
+      <h2 id="fileMsg">Verbinde mit dem Soundboard …</h2>
+      <p class="note" id="fileHint">Diese Datei ist nur die Vorlage der Oberfläche. Die eigentliche Oberfläche liefert das
+        laufende Soundboard unter <a class="ext" href="${TOOL}">${TOOL}</a> aus – am besten dafür ein Lesezeichen anlegen.</p>
+    </div>`;
+  fetch(TOOL + 'api/state', { mode: 'no-cors', cache: 'no-store' })
+    .then(() => { location.replace(TOOL); })
+    .catch(() => {
+      document.getElementById('fileMsg').textContent = 'Das Soundboard läuft nicht.';
+      document.getElementById('fileHint').innerHTML =
+        'Bitte zuerst <code>start.bat</code> oder die Desktopverknüpfung „WARDOGS + Soundboard“ starten, ' +
+        `dann <a class="ext" href="${TOOL}">${TOOL}</a> öffnen.<br><br>Diese Datei ist nur die Vorlage der Oberfläche ` +
+        '– direkt geöffnet funktioniert sie nicht.';
+    });
+  throw new Error('file-mode');   // restliches Skript nicht ausführen
+}
+
+// Numpad-Layout: Tastenbeschriftung, Zusatzklasse ("tall"/"wide"), "STOP" = Enter
+const LAYOUT = [
+  ['Num'], ['/'], ['*'], ['-'],
+  ['7'], ['8'], ['9'], ['+', 'tall'],
+  ['4'], ['5'], ['6'],
+  ['1'], ['2'], ['3'], ['STOP', 'tall'],
+  ['0', 'wide'], [','],
+];
+const grid = document.getElementById('grid');
+const statusEl = document.getElementById('status');
+const vol = document.getElementById('vol');
+const volText = document.getElementById('volText');
+let state = null, editing = null, volBusy = false, lastKey = '';
+
+function setStatus(text, err = false) {
+  statusEl.textContent = text;
+  statusEl.classList.toggle('err', err);
+}
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { method: 'POST', ...opts });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `Fehler ${r.status}`);
+  return data;
+}
+
+function render() {
+  if (!state) return;
+  if (state.max_volume) vol.max = Math.round(state.max_volume * 100);
+  if (!volBusy) {
+    vol.value = Math.round(state.volume * 100);
+  }
+  volText.classList.toggle('boost', state.volume > 1);
+  document.getElementById('volNote').classList.toggle('hot', state.volume >= 1.5);
+  volText.textContent = Math.round(state.volume * 100) + ' %';
+  document.getElementById('version').textContent = state.version ? 'v' + state.version : '';
+  renderBanner();
+
+  // Raster nur neu aufbauen, wenn sich die Belegung geändert hat
+  const key = JSON.stringify(state.slots);
+  if (key === lastKey) {
+    grid.querySelectorAll('.tile').forEach(t =>
+      t.classList.toggle('playing', state.playing.includes(+t.dataset.n - 1)));
+    return;
+  }
+  lastKey = key;
+  grid.innerHTML = '';
+  const byKey = Object.fromEntries(state.slots.map(s => [s.key, s]));
+  for (const [key, cls] of LAYOUT) {
+    if (key === 'STOP') {
+      const t = document.createElement('div');
+      t.className = 'tile stopkey tall';
+      t.innerHTML = '<div class="num">■</div><div class="name">Stopp</div><div class="meta">Enter</div>';
+      t.addEventListener('click', () => document.getElementById('stop').click());
+      grid.appendChild(t);
+      continue;
+    }
+    const s = byKey[key];
+    const n = s.slot;
+    const tile = document.createElement('div');
+    tile.className = 'tile' + (cls ? ' ' + cls : '') + (s.name ? '' : ' empty') +
+      (state.playing.includes(n - 1) ? ' playing' : '');
+    tile.dataset.n = n;
+    tile.innerHTML = `
+      <div class="num"></div>
+      <div>
+        <div class="name"></div>
+        <div class="meta"></div>
+      </div>
+      <button class="edit" title="Sound ändern">✎</button>`;
+    tile.querySelector('.num').textContent = key;
+    tile.querySelector('.name').textContent = s.name || 'leer';
+    tile.querySelector('.meta').textContent = s.name
+      ? `${s.seconds} s` + (s.full_seconds ? ` (gekürzt, ${s.full_seconds} s)` : '') +
+        (s.custom ? ' · eigener Titel' : '') : 'Link oder Datei hinzufügen';
+    tile.title = s.file ? s.file + (s.custom ? `\nAutomatisch: ${s.auto_name}` : '') : '';
+
+    tile.addEventListener('click', e => {
+      if (e.target.closest('.edit')) return openEdit(n);
+      if (s.name) play(n); else openEdit(n);
+    });
+
+    tile.addEventListener('dragover', e => { e.preventDefault(); tile.classList.add('drop'); });
+    tile.addEventListener('dragleave', () => tile.classList.remove('drop'));
+    tile.addEventListener('drop', e => {
+      e.preventDefault(); tile.classList.remove('drop');
+      const file = e.dataTransfer.files[0];
+      const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
+      if (file) upload(n, file);
+      else if (url) importUrl(n, url.trim());
+    });
+    grid.appendChild(tile);
+  }
+}
+
+async function refresh() {
+  try {
+    const r = await fetch('/api/state', { cache: 'no-store' });
+    state = await r.json();
+    if (statusEl.textContent === 'verbinde …' || statusEl.textContent === 'Tool nicht erreichbar')
+      setStatus('bereit');
+    render();
+  } catch {
+    setStatus('Tool nicht erreichbar', true);
+  }
+}
+
+async function play(n) {
+  try { state = await api(`/api/play/${n}`); render(); } catch (e) { setStatus(e.message, true); }
+}
+
+let labelDirty = false;
+const labelEl = document.getElementById('label');
+labelEl.addEventListener('input', () => { labelDirty = true; });
+
+function openEdit(n) {
+  editing = n;
+  labelDirty = false;
+  const s = state.slots[n - 1];
+  document.getElementById('dlgTitle').textContent = `Taste ${s.key}`;
+  labelEl.value = s.custom ? s.name : '';
+  labelEl.placeholder = s.auto_name || 'automatisch aus Link bzw. Datei';
+  document.getElementById('labelHint').textContent = s.name
+    ? `Leer lassen = automatischer Titel „${s.auto_name}“.`
+    : 'Leer lassen = Titel der Myinstants-Seite bzw. der Datei.';
+  document.getElementById('urlLabel').innerHTML = s.name
+    ? 'Sound ersetzen <span class="sub">(optional)</span>' : 'Sound';
+  document.getElementById('url').value = '';
+  document.getElementById('dlg').showModal();
+  (s.name ? labelEl : document.getElementById('url')).focus();
+}
+
+document.getElementById('dlg').addEventListener('close', () => {
+  const dlg = document.getElementById('dlg');
+  const url = document.getElementById('url').value.trim();
+  if (dlg.returnValue !== 'ok' || !editing) return;
+  const s = state.slots[editing - 1];
+  const label = labelEl.value.trim();
+  if (url) {
+    // neuer Sound: nur einen hier bewusst eingetragenen Titel übernehmen
+    importUrl(editing, url, labelDirty ? label : null);
+  } else if (s.name && label !== (s.custom ? s.name : '')) {
+    setLabel(editing, label);
+  }
+});
+
+async function setLabel(n, label) {
+  try {
+    state = await api('/api/label', {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: n, label })
+    });
+    render();
+    const s = state.slots[n - 1];
+    setStatus(s.custom ? `Taste ${s.key}: Titel „${s.name}“` : `Taste ${s.key}: automatischer Titel`);
+  } catch (e) { setStatus(e.message, true); }
+}
+
+async function importUrl(n, url, label = null) {
+  setStatus(`lade Sound für Taste ${state.slots[n - 1].key} …`);
+  try {
+    state = await api('/api/import', {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: n, url, label })
+    });
+    render(); setStatus(`Taste ${state.slots[n - 1].key}: ${state.slots[n - 1].name}`);
+  } catch (e) { setStatus(e.message, true); }
+}
+
+async function upload(n, file) {
+  setStatus(`lade ${file.name} …`);
+  try {
+    state = await api(`/api/upload/${n}`, {
+      headers: { 'X-Filename': encodeURIComponent(file.name) },
+      body: file
+    });
+    render(); setStatus(`Taste ${state.slots[n - 1].key}: ${state.slots[n - 1].name}`);
+  } catch (e) { setStatus(e.message, true); }
+}
+
+vol.addEventListener('input', () => {
+  volBusy = true; volText.textContent = vol.value + ' %';
+  document.getElementById('volNote').classList.toggle('hot', vol.value >= 150);
+});
+vol.addEventListener('change', async () => {
+  try {
+    state = await api('/api/volume', {
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ value: vol.value / 100 })
+    });
+  } catch (e) { setStatus(e.message, true); }
+  volBusy = false; render();
+});
+
+document.getElementById('stop').addEventListener('click', async () => {
+  try { state = await api('/api/stop'); render(); } catch (e) { setStatus(e.message, true); }
+});
+document.getElementById('reload').addEventListener('click', async () => {
+  try { state = await api('/api/reload'); render(); setStatus('Ordner neu geladen'); }
+  catch (e) { setStatus(e.message, true); }
+});
+
+// ---------- Menü ----------
+const views = { board: document.getElementById('viewBoard'), guide: document.getElementById('viewGuide') };
+function showView() {
+  const v = location.hash === '#anleitung' ? 'guide' : 'board';
+  for (const [k, el] of Object.entries(views)) el.hidden = k !== v;
+  document.querySelectorAll('.tabs a').forEach(a => a.classList.toggle('active', a.dataset.view === v));
+  if (v === 'guide') loadSetup();
+}
+window.addEventListener('hashchange', showView);
+document.querySelector('.tabs a[data-view="board"]').addEventListener('click', e => {
+  e.preventDefault(); history.pushState('', '', location.pathname); showView();
+});
+
+// ---------- Hinweis-Banner ----------
+function renderBanner() {
+  const b = document.getElementById('banner'), dot = document.getElementById('issueDot');
+  const n = state.setup_issues || 0;
+  if (!state.audio) {
+    b.className = 'banner show';
+    document.getElementById('bannerText').textContent =
+      'Audio läuft nicht – die Sounds kommen so nicht im Spiel an. Einrichtung prüfen.';
+  } else if (n) {
+    b.className = 'banner show warn';
+    document.getElementById('bannerText').textContent =
+      `Einrichtung: ${n} Punkt${n > 1 ? 'e' : ''} zu prüfen.`;
+  } else {
+    b.className = 'banner';
+  }
+  dot.className = 'dot' + (n ? ' show' : '') + (state.audio && n ? ' warn' : '');
+}
+
+// ---------- Einrichtungs-Check ----------
+const ICON = { ok: '✓', warn: '!', error: '✗', info: 'i' };
+const CHIP = { ok: 'OK', warn: 'prüfen', error: 'fehlt', info: 'aus' };
+let setupTimer = null;
+
+function renderSetup(info) {
+  const ul = document.getElementById('checks');
+  ul.innerHTML = '';
+  for (const it of info.items) {
+    const li = document.createElement('li');
+    li.innerHTML = `<span class="ico s-${it.status}">${ICON[it.status]}</span><span class="lbl"></span><span class="det"></span>`;
+    li.querySelector('.lbl').textContent = it.label;
+    li.querySelector('.det').textContent = it.detail || '';
+    ul.appendChild(li);
+  }
+  const byId = Object.fromEntries(info.items.map(i => [i.id, i]));
+  document.querySelectorAll('[data-check]').forEach(el => {
+    const it = byId[el.dataset.check];
+    el.textContent = it ? CHIP[it.status] : '';
+    el.className = 'chip' + (it ? ' s-' + it.status : '');
+  });
+  for (const [k, v] of Object.entries(info.config))
+    document.querySelectorAll(`[data-cfg="${k}"]`).forEach(el => el.textContent = v ?? '–');
+  document.getElementById('testTone').disabled = !info.audio;
+}
+
+async function loadSetup() {
+  try {
+    const r = await fetch('/api/setup', { cache: 'no-store' });
+    renderSetup(await r.json());
+  } catch { setStatus('Tool nicht erreichbar', true); }
+  clearTimeout(setupTimer);
+  if (!views.guide.hidden) setupTimer = setTimeout(loadSetup, 3000);
+}
+
+document.getElementById('recheck').addEventListener('click', async () => {
+  setStatus('prüfe …');
+  try { renderSetup(await api('/api/setup/check')); setStatus('geprüft'); refresh(); }
+  catch (e) { setStatus(e.message, true); }
+});
+document.getElementById('testTone').addEventListener('click', async () => {
+  try { await api('/api/test'); setStatus('Testton gespielt'); } catch (e) { setStatus(e.message, true); }
+});
+
+showView();
+refresh();
+setInterval(refresh, 700);
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Persönliche Sounds und Einstellungen nie ins Repository
+sounds/*
+!sounds/.keep
+launcher.log
+
+# Python
+__pycache__/
+*.pyc
+
+# Sonstiges
+*.zip
+.DS_Store
+Thumbs.db
