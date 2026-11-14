@@ -19,6 +19,11 @@ Erste Anlaufstelle: der **Einrichtungs-Check** unter **Anleitung** in der Oberfl
 | Langer Sound wird abgeschnitten | Grenze ist 90 Sekunden – `MAX_SECONDS` erhöhen. |
 | Desktopverknüpfung startet das Soundboard nicht | `launcher.log` ansehen; `python soundboard.py` einmal direkt starten. Wurde der Ordner verschoben, Verknüpfung neu anlegen. |
 | Bild-Link: „zeigt nicht direkt auf ein Bild“ | Rechtsklick auf das Bild → „Bildadresse kopieren“ und diese verwenden – oder das Bild kopieren und im Dialog mit Strg+V einfügen. |
+| Bild ↑/↓ löst im Spiel etwas aus | Tasten in WARDOGS neu belegen oder `PAGE_KEYS = False` setzen und die Seite in der Oberfläche wechseln. |
+| „Aufnahme nicht möglich: Mikrofon läuft nicht“ | Im Einrichtungs-Check muss „Mikrofon gefunden“ grün sein (Schritt 5). |
+| „Text-to-Speech fehlgeschlagen“ / keine deutsche Stimme | Einrichtungs-Check → „Sprachausgabe“ ansehen. Deutsche Stimme über Windows-Einstellungen → Zeit und Sprache → Sprache nachinstallieren. |
+| Seite „Kommandos“ bleibt leer | Die Vorlage braucht die Windows-Stimme. Danach über ⚙ → „Freie Tasten mit Kommandos füllen“. |
+| Meine alten Sounds sind weg | Ab Version 2.0 liegen sie auf der Seite **Eigene** (Ordner `sounds\Eigene`). |
 | Myinstants-Link lädt nicht | Auf der Myinstants-Seite den direkten MP3-Link (Download) kopieren und den verwenden. |
 
 Problem nicht dabei? Gerne ein **[Issue](https://github.com/TARLoki/wardogs-soundboard/issues)** anlegen – mit Screenshot des Konsolenfensters.

@@ -27,6 +27,16 @@ Gerätenamen anzeigen: `python soundboard.py --list` – bei Gerätenamen reicht
 | `EXCLUSIVE` | `True` | neuer Sound beendet laufende Sounds |
 | `MAX_SECONDS` | `90` | längere Sounds werden gekürzt |
 | `KEEP_NUMLOCK` | `True` | NumLock nach Druck zurückschalten |
+| `RECORD_MAX_SECONDS` | `30` | Aufnahmen enden spätestens nach dieser Zeit |
+
+## Seiten und Sprachausgabe
+
+| Option | Standard | Bedeutung |
+|---|---|---|
+| `PAGE_KEYS` | `True` | Bild ↑ / Bild ↓ wechseln die Seite |
+| `ANNOUNCE_PAGES` | `True` | Seitenname beim Wechsel im eigenen Headset ansagen (ohne Windows-Stimme: kurze Töne) |
+| `TTS_LANG` | `"de"` | Sprache der Windows-Stimme für Text-to-Speech und Ansagen |
+| `TTS_RATE` | `0` | Sprechtempo von -10 (langsam) bis 10 (schnell) |
 
 ## Push-to-Talk
 

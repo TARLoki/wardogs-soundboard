@@ -5,6 +5,7 @@
 - [Spiel und Discord](Spiel-und-Discord-einrichten)
 
 **Benutzung**
+- [Seiten und Kommandos](Seiten-und-Kommandos)
 - [Sounds verwalten](Sounds-verwalten)
 - [Bedienung](Bedienung)
 - [Desktopverknüpfung](Desktopverknuepfung)

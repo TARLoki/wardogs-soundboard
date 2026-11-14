@@ -9,6 +9,7 @@
 | **NumLock** | Sound abspielen – NumLock schaltet danach automatisch zurück |
 | **gleiche Taste nochmal** | laufenden Sound stoppen |
 | Numpad **Enter** | alle Sounds stoppen |
+| **Bild ↑ / Bild ↓** | vorherige / nächste Seite (Ansage im eigenen Headset) |
 
 Die Tasten funktionieren unabhängig davon, ob NumLock an oder aus ist.
 
@@ -19,7 +20,7 @@ Die Tasten funktionieren unabhängig davon, ob NumLock an oder aus ist.
 `http://localhost:8765` – am besten als Lesezeichen. Ein Doppelklick auf `web.html` leitet ebenfalls dorthin weiter, wenn das Soundboard läuft.
 
 - **Klick** auf eine Kachel spielt ab, **nochmal klicken** stoppt.
-- **Stopp** und **Lautstärke** oben.
+- **Stopp** und **Lautstärke** oben, darunter die **Reiter der Seiten** mit **＋** (neue Seite) und **⚙** (Seite bearbeiten) – siehe [Seiten und Kommandos](Seiten-und-Kommandos).
 - **Anleitung**: Einrichtungs-Check, Testton, Schritt-für-Schritt-Anleitung.
 
 Beim Klicken im Browser ist der Browser das aktive Fenster – die automatische Sprechtaste greift dann nicht. Im Spiel also das **Numpad** nutzen oder vom **Handy** aus bedienen.

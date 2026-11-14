@@ -17,10 +17,16 @@ Push-to-Talk:
   Beim Abspielen wird die Spieltaste (PTT_KEY, Standard "k") automatisch gehalten,
   bis der Sound zu Ende ist - aber nur, wenn das WARDOGS-Fenster aktiv ist.
 
+Seiten:
+  Beliebig viele Seiten (z. B. „Kommandos“, „Eigene“) mit je 16 Tasten. Jede Seite
+  liegt in einem eigenen Unterordner von sounds/. Neue Seiten können mit der Vorlage
+  „Kommandos“ (Text-to-Speech mit Funk-Effekt) angelegt werden.
+
 Tasten (egal ob NumLock an oder aus):
-  Numpad 0-9 , / * - + NumLock   je ein Sound (16 Plätze)
+  Numpad 0-9 , / * - + NumLock   je ein Sound (16 Plätze pro Seite)
   Gleiche Taste nochmal          laufenden Sound stoppen
   Numpad Enter                   alle Sounds stoppen
+  Bild ↑ / Bild ↓                vorherige / nächste Seite (Ansage im eigenen Headset)
   Strg+C                         Beenden (im Konsolenfenster)
   Lautstärke und Neuladen gibt es in der Weboberfläche.
   NumLock wird nach dem Drücken automatisch zurückgeschaltet.
@@ -38,7 +44,11 @@ Platzbelegung:
   Dateien mit Präfix landen fest auf diesem Platz, z. B. "3_leeroy.mp3",
   "0_...", "komma_...", "geteilt_...", "mal_...", "minus_...", "plus_...", "num_...".
   Dateien ohne Präfix füllen freie Plätze alphabetisch.
-  Ersetzte Sounds werden nicht gelöscht, sondern nach sounds/_alt verschoben.
+  Ersetzte Sounds werden nicht gelöscht, sondern nach sounds/<Seite>/_alt verschoben.
+
+Quellen für Sounds:
+  Myinstants-/MP3-Link, eigene Datei, Aufnahme übers Mikrofon oder Text → Sprache
+  (Windows-Stimme). Optional mit Funk-Effekt.
 
 Bilder und Emojis:
   Jede Taste kann ein Bild (als Kachelhintergrund) oder ein Emoji bekommen. Es hängt am
@@ -47,7 +57,7 @@ Bilder und Emojis:
 
 Titel:
   Automatisch aus Myinstants-Seitentitel, Datei-Metadaten oder Dateinamen.
-  Eigene Titel stehen in sounds/labels.json und verfallen, wenn die Datei getauscht wird.
+  Eigene Titel stehen in sounds/<Seite>/labels.json und verfallen, wenn die Datei getauscht wird.
 
 Aufruf:
   python soundboard.py               Soundboard starten
@@ -63,9 +73,12 @@ Desktopverknüpfung:
 import collections
 import hashlib
 import html as htmllib
+import io
 import json
+import os
 import re
 import shutil
+import subprocess
 import sys
 import threading
 import time
@@ -85,11 +98,11 @@ VERSION = "2.0"
 # ============================ Konfiguration ============================
 
 BASE_DIR = Path(__file__).parent
-SOUND_DIR = BASE_DIR / "sounds"
-OLD_DIR = SOUND_DIR / "_alt"
-LABELS_FILE = SOUND_DIR / "labels.json"
-ART_FILE = SOUND_DIR / "art.json"          # Bild/Emoji je Sound
+SOUND_DIR = BASE_DIR / "sounds"            # je Seite ein Unterordner, z. B. sounds/Kommandos
+PAGES_FILE = SOUND_DIR / "pages.json"      # Reihenfolge und Namen der Seiten
 IMG_DIR = SOUND_DIR / "images"             # Bildbibliothek (bleibt erhalten)
+CACHE_DIR = SOUND_DIR / ".cache"           # Seitenansagen (Text-to-Speech)
+TRASH_DIR = SOUND_DIR / "_geloeschte_Seiten"
 MAX_IMAGE_BYTES = 3 * 1024 * 1024
 EXTENSIONS = {".wav", ".ogg", ".flac", ".mp3"}
 
@@ -112,6 +125,12 @@ EXCLUSIVE = True               # True = neuer Sound beendet laufende Sounds
 MAX_SECONDS = 90               # längere Sounds werden abgeschnitten (Schutz vor ganzen Liedern)
 
 KEEP_NUMLOCK = True            # NumLock nach Druck auf die NumLock-Taste zurückschalten
+
+PAGE_KEYS = True               # Bild ↑ / Bild ↓ wechseln die Seite
+ANNOUNCE_PAGES = True          # beim Wechsel den Seitennamen im eigenen Headset ansagen
+TTS_LANG = "de"                # Sprache der Windows-Stimme für Text-to-Speech und Ansagen
+TTS_RATE = 0                   # Sprechtempo -10 (langsam) bis 10 (schnell)
+RECORD_MAX_SECONDS = 30        # Aufnahmen enden spätestens nach dieser Zeit
 
 PTT_KEY = "k"                  # Push-to-Talk-Taste im Spiel, None = abschalten
 PTT_WINDOW = "WARDOGS"         # nur drücken, wenn dieses Fenster aktiv ist (None = immer)
@@ -149,6 +168,18 @@ SCAN_TO_SLOT = {sc: i for i, (_, _, sc) in enumerate(SLOTS)}
 PREFIX_TO_SLOT = {pre: i for i, (_, pre, _) in enumerate(SLOTS)}
 STOP_SCAN = 28                 # Numpad Enter
 NUMLOCK_SCAN = 69
+PAGE_UP_SCAN, PAGE_DOWN_SCAN = 73, 81   # eigene Bild-Tasten (nicht Numpad 9/3)
+RESERVED_DIRS = {"images", "_alt", ".cache", "_geloeschte_Seiten"}
+
+# Vorlage für eine neue Seite „Kommandos“ (Taste, Text) – per Text-to-Speech mit Funk-Effekt
+COMMAND_TEMPLATE = [
+    ("7", "Feind links!"), ("8", "Feind voraus!"), ("9", "Feind rechts!"),
+    ("4", "Deckung!"), ("5", "Position halten!"), ("6", "Granate!"),
+    ("1", "Mir nach!"), ("2", "Feind hinter uns!"), ("3", "Brauche Sanitäter!"),
+    ("0", "Verstanden!"), (",", "Negativ!"),
+    ("/", "Nachladen!"), ("*", "Brauche Munition!"), ("-", "Rückzug!"), ("+", "Freund, nicht schießen!"),
+    ("Num", "Scharfschütze!"),
+]
 PREFIX = re.compile(r"^(" + "|".join(PREFIX_TO_SLOT) + r")[_\- ]", re.I)
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) WARDOGS-Soundboard"
 
@@ -226,9 +257,9 @@ class Player:
         self.voices = []
         self.lock = threading.Lock()
 
-    def play(self, data, slot):
+    def play(self, data, slot, exclusive=None):
         with self.lock:
-            if EXCLUSIVE:
+            if EXCLUSIVE if exclusive is None else exclusive:
                 self.voices.clear()
             self.voices.append([data, 0, slot])
 
@@ -238,7 +269,7 @@ class Player:
 
     def active_slots(self):
         with self.lock:
-            return sorted({v[2] for v in self.voices})
+            return [k for k in {v[2] for v in self.voices} if k is not None]
 
     def mix(self, frames: int) -> np.ndarray:
         out = np.zeros((frames, 2), np.float32)
@@ -360,7 +391,7 @@ class PushToTalk:
 
 class Setup:
     """Sammelt die Prüfergebnisse. status: ok | warn | error | info"""
-    ORDER = ["python", "packages", "cable", "monitor", "mic", "audio", "hotkeys", "sounds", "update"]
+    ORDER = ["python", "packages", "cable", "monitor", "mic", "audio", "hotkeys", "tts", "sounds", "update"]
 
     def __init__(self):
         self.items = {}
@@ -476,6 +507,7 @@ class AudioEngine:
 
     def _mic_cb(self, indata, _frames, _t, _status):
         self.mic.push(indata[:, 0])
+        self.board.rec_push(indata[:, 0])
 
     def start(self, devs) -> bool:
         setup = self.board.setup
@@ -505,6 +537,7 @@ class AudioEngine:
             return False
         self.streams = streams
         self.mic_active = bool(self.mic and devs["mic_ok"])
+        self.board.mic_ready = self.mic_active
         self.board.audio_ready = True
         detail = "Sounds" + (" + Mikrofon" if self.mic_active else " (ohne Mikrofon!)") + " → VB-Cable"
         setup.set("audio", "ok" if self.mic_active or not MIC_PASSTHROUGH else "warn", "Audio läuft", detail)
@@ -524,9 +557,9 @@ class AudioEngine:
 def check_static(setup: Setup, board):
     setup.set("python", "ok", f"Python {sys.version.split()[0]}", sys.executable)
     setup.set("packages", "ok", "Python-Pakete installiert", "numpy, sounddevice, soundfile, keyboard")
-    n = sum(1 for s in board.slots if s)
+    n = sum(1 for p in board.pages for s in p.slots if s)
     if n:
-        setup.set("sounds", "ok", f"{n} von {NSLOTS} Tasten belegt")
+        setup.set("sounds", "ok", f"{n} Sound(s) auf {len(board.pages)} Seite(n)")
     else:
         setup.set("sounds", "warn", "Noch keine Sounds belegt",
                   "Über ✎ einen Myinstants-Link einfügen oder eine Datei auf eine Kachel ziehen (Schritt 9).")
@@ -579,103 +612,185 @@ def clean_emoji(text: str):
 
 
 # ----------------------------------------------------------------------
-# Soundboard-Logik (von Hotkeys und Weboberfläche gemeinsam genutzt)
+# Sprachausgabe (Windows) und Funk-Effekt
 # ----------------------------------------------------------------------
 
-class Board:
-    def __init__(self):
-        self.volume = SOUND_VOLUME
-        self.slots = [None] * NSLOTS       # (Name, Datei, ndarray) oder None
-        self.cable = Player()
-        self.monitor = Player() if MONITOR else None
-        self.ptt = PushToTalk(PTT_KEY) if PTT_KEY else None
-        self.file_lock = threading.Lock()
-        self.gen = 0
-        self.audio_ready = False
-        self.setup = Setup()
-        self.labels = self._load_labels()
-        self.art = read_json(ART_FILE)
+TTS_SCRIPT = r"""
+$ErrorActionPreference = 'Stop'
+Add-Type -AssemblyName System.Speech
+$items = $env:SB_ITEMS | ConvertFrom-Json
+$s = New-Object System.Speech.Synthesis.SpeechSynthesizer
+$voice = $s.GetInstalledVoices() | Where-Object { $_.Enabled -and $_.VoiceInfo.Culture.Name -like ($env:SB_LANG + '*') } | Select-Object -First 1
+if ($voice) { $s.SelectVoice($voice.VoiceInfo.Name) }
+$s.Rate = [int]$env:SB_RATE
+foreach ($it in $items) {
+  $s.SetOutputToWaveFile($it.out)
+  $s.Speak($it.text)
+}
+$s.SetOutputToNull()
+$s.Dispose()
+"""
 
-    # ---- Bilder und Emojis ----
-    def add_image(self, data: bytes) -> str:
-        """Bild in die Bibliothek aufnehmen (gleiche Bilder werden nur einmal gespeichert)."""
-        if len(data) > MAX_IMAGE_BYTES:
-            raise ValueError("Bild ist zu groß (max. 3 MB)")
-        kind = image_type(data)
-        if not kind:
-            raise ValueError("Keine Bilddatei (PNG, JPG, GIF oder WebP)")
-        name = f"{hashlib.sha256(data).hexdigest()[:16]}.{kind}"
-        IMG_DIR.mkdir(parents=True, exist_ok=True)
-        path = IMG_DIR / name
-        if not path.exists():
-            path.write_bytes(data)
-        return name
+TTS_VOICES_SCRIPT = r"""
+Add-Type -AssemblyName System.Speech
+$s = New-Object System.Speech.Synthesis.SpeechSynthesizer
+$s.GetInstalledVoices() | Where-Object { $_.Enabled } | ForEach-Object { $_.VoiceInfo.Culture.Name + '|' + $_.VoiceInfo.Name }
+$s.Dispose()
+"""
 
-    def list_images(self):
-        if not IMG_DIR.exists():
-            return []
-        files = [p for p in IMG_DIR.iterdir() if IMAGE_NAME.match(p.name)]
-        return [p.name for p in sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)]
+NO_WINDOW = 0x08000000
 
-    def set_art(self, idx, image=None, emoji=None):
-        """Bild (Name aus der Bibliothek) oder Emoji setzen; beides leer = entfernen."""
+
+def tts_available() -> bool:
+    return sys.platform == "win32"
+
+
+def _powershell(script, env_extra, timeout):
+    env = dict(os.environ)
+    env.update(env_extra)
+    return subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass",
+                           "-Command", script], env=env, capture_output=True, timeout=timeout,
+                          creationflags=NO_WINDOW if sys.platform == "win32" else 0)
+
+
+def tts_batch(items):
+    """items = [(text, Path)] -> erzeugt WAV-Dateien mit der Windows-Sprachausgabe."""
+    if not tts_available():
+        raise ValueError("Text-to-Speech gibt es nur unter Windows")
+    payload = json.dumps([{"text": t, "out": str(p)} for t, p in items])
+    r = _powershell(TTS_SCRIPT, {"SB_ITEMS": payload, "SB_LANG": TTS_LANG, "SB_RATE": str(TTS_RATE)},
+                    timeout=20 + 6 * len(items))
+    missing = [str(p) for _, p in items if not Path(p).exists() or Path(p).stat().st_size < 1000]
+    if missing:
+        err = r.stderr.decode("utf-8", "ignore").strip().splitlines()
+        raise ValueError("Text-to-Speech fehlgeschlagen" + (f": {err[-1]}" if err else ""))
+
+
+def tts_voices():
+    """[(Kultur, Name)] der installierten Windows-Stimmen."""
+    if not tts_available():
+        return []
+    r = _powershell(TTS_VOICES_SCRIPT, {}, timeout=20)
+    out = r.stdout.decode("utf-8", "ignore")
+    return [tuple(line.split("|", 1)) for line in out.splitlines() if "|" in line]
+
+
+def check_tts(setup):
+    if not tts_available():
+        setup.set("tts", "info", "Text-to-Speech nur unter Windows verfügbar")
+        return
+    try:
+        voices = tts_voices()
+    except Exception as e:
+        setup.set("tts", "warn", "Sprachausgabe nicht verfügbar", str(e))
+        return
+    lang = [v for v in voices if v[0].lower().startswith(TTS_LANG.lower())]
+    if lang:
+        setup.set("tts", "ok", "Sprachausgabe bereit", lang[0][1])
+    elif voices:
+        setup.set("tts", "warn", f"Keine Stimme für „{TTS_LANG}“ installiert",
+                  f"Verwendet wird {voices[0][1]}. Weitere Stimmen: Windows-Einstellungen → Zeit und Sprache → Sprache.")
+    else:
+        setup.set("tts", "warn", "Keine Windows-Stimme gefunden", "Text-to-Speech und Seitenansage sind nicht möglich.")
+
+
+def _bandpass(x, lo, hi):
+    n = len(x)
+    if n < 16:
+        return x
+    spec = np.fft.rfft(x)
+    f = np.maximum(np.fft.rfftfreq(n, 1 / SAMPLE_RATE), 1.0)
+    gain = 1 / (1 + (lo / f) ** 4) / (1 + (f / hi) ** 4)
+    return np.fft.irfft(spec * gain, n)
+
+
+def radio_effect(data: np.ndarray) -> np.ndarray:
+    """Klang wie über Funk: Bandpass, leichte Sättigung, Rauschen, Klick am Anfang, „Ksch“ am Ende."""
+    x = data.mean(axis=1).astype(np.float64)
+    x = _bandpass(x, 350.0, 3200.0)
+    peak = float(np.max(np.abs(x))) or 1.0
+    x = np.tanh(x / peak * 2.4) / np.tanh(2.4)
+    rng = np.random.default_rng(7)
+    x = x + _bandpass(rng.normal(0, 0.03, len(x)), 500.0, 3000.0)
+    click = np.zeros(int(0.05 * SAMPLE_RATE))
+    click[:int(0.008 * SAMPLE_RATE)] = _bandpass(rng.normal(0, 0.6, int(0.008 * SAMPLE_RATE)), 800, 4000)
+    tail_n = int(0.16 * SAMPLE_RATE)
+    tail = _bandpass(rng.normal(0, 0.35, tail_n), 600.0, 4500.0) * np.linspace(1, 0, tail_n) ** 1.5
+    y = np.concatenate([click, x, tail])
+    y = y / (float(np.max(np.abs(y))) or 1.0) * NORMALIZE_PEAK
+    return np.ascontiguousarray(np.repeat(y[:, None], 2, axis=1), dtype=np.float32)
+
+
+def wav_bytes(mono: np.ndarray) -> bytes:
+    buf = io.BytesIO()
+    sf.write(buf, mono.astype(np.float32), SAMPLE_RATE, format="WAV", subtype="PCM_16")
+    return buf.getvalue()
+
+
+def trim_silence(mono: np.ndarray) -> np.ndarray:
+    a = np.abs(mono)
+    if not len(a):
+        raise ValueError("Nichts aufgenommen")
+    thr = max(0.015, float(a.max()) * 0.08)
+    idx = np.nonzero(a > thr)[0]
+    if not len(idx):
+        raise ValueError("Nichts aufgenommen – war das Mikrofon zu leise?")
+    start = max(0, idx[0] - int(0.08 * SAMPLE_RATE))
+    end = min(len(mono), idx[-1] + int(0.15 * SAMPLE_RATE))
+    return mono[start:end]
+
+
+def beeps(n: int) -> np.ndarray:
+    """n kurze Töne (Rückfall für die Seitenansage)."""
+    t = np.arange(int(0.09 * SAMPLE_RATE)) / SAMPLE_RATE
+    tone = 0.4 * np.sin(2 * np.pi * 990 * t) * np.minimum(1, np.minimum(t, t[-1] - t) / 0.01)
+    gap = np.zeros(int(0.08 * SAMPLE_RATE))
+    y = np.concatenate([np.concatenate([tone, gap]) for _ in range(max(1, min(n, 6)))])
+    return np.ascontiguousarray(np.repeat(y[:, None], 2, axis=1), dtype=np.float32)
+
+
+# ----------------------------------------------------------------------
+# Seiten: je Seite 16 Tasten mit eigenen Sounds, Titeln, Bildern, Effekten
+# ----------------------------------------------------------------------
+
+def slug(name: str) -> str:
+    s = re.sub(r"[^\w\-]+", "_", name.strip()).strip("_")[:40]
+    return s or "Seite"
+
+
+class Page:
+    def __init__(self, board, pid, name, template=None, filled=False):
+        self.board = board
+        self.id = pid
+        self.name = name
+        self.template = template
+        self.filled = filled
+        self.dir = SOUND_DIR / pid
+        self.slots = [None] * NSLOTS
+        self.dir.mkdir(parents=True, exist_ok=True)
+        self.labels = {str(k): str(v) for k, v in read_json(self.dir / "labels.json").items() if str(v).strip()}
+        self.art = read_json(self.dir / "art.json")
+        self.fx = read_json(self.dir / "fx.json")
+
+    def meta(self):
+        return {"id": self.id, "name": self.name, "template": self.template, "filled": self.filled}
+
+    def _save(self):
+        write_json(self.dir / "labels.json", self.labels)
+        write_json(self.dir / "art.json", self.art)
+        write_json(self.dir / "fx.json", self.fx)
+
+    def slot(self, idx):
         s = self.slots[idx] if 0 <= idx < NSLOTS else None
         if not s:
             raise ValueError("Auf dieser Taste liegt kein Sound")
-        if image:
-            if not IMAGE_NAME.match(image) or not (IMG_DIR / image).exists():
-                raise ValueError("Bild nicht in der Bibliothek gefunden")
-            (IMG_DIR / image).touch()                       # zuletzt benutzt -> vorne
-            entry = {"image": image}
-        elif emoji:
-            e = clean_emoji(emoji)
-            if not e:
-                raise ValueError("Ungültiges Emoji")
-            entry = {"emoji": e}
-        else:
-            entry = None
-        with self.file_lock:
-            if entry:
-                self.art[s[1].name] = entry
-            else:
-                self.art.pop(s[1].name, None)
-            write_json(ART_FILE, self.art)
+        return s
 
-    # ---- eigene Titel ----
-    def _load_labels(self):
-        try:
-            data = json.loads(LABELS_FILE.read_text(encoding="utf-8"))
-            return {str(k): str(v) for k, v in data.items() if str(v).strip()}
-        except Exception:
-            return {}
-
-    def _save_labels(self):
-        try:
-            SOUND_DIR.mkdir(exist_ok=True)
-            LABELS_FILE.write_text(json.dumps(self.labels, ensure_ascii=False, indent=2), encoding="utf-8")
-        except Exception as e:
-            print(f"  ! labels.json konnte nicht gespeichert werden: {e}")
-
-    def set_label(self, idx, label):
-        """Eigenen Titel setzen; leer = automatischer Titel."""
-        s = self.slots[idx] if 0 <= idx < NSLOTS else None
-        if not s:
-            raise ValueError("Auf dieser Taste liegt kein Sound")
-        label = (label or "").strip()[:60]
-        with self.file_lock:
-            if label:
-                self.labels[s[1].name] = label
-            else:
-                self.labels.pop(s[1].name, None)
-            self._save_labels()
-        self.reload(quiet=True)
-
-    # ---- Sounds laden ----
-    def reload(self, quiet=False):
-        with self.file_lock:
-            SOUND_DIR.mkdir(exist_ok=True)
-            files = sorted(p for p in SOUND_DIR.iterdir()
-                           if p.is_file() and p.suffix.lower() in EXTENSIONS)
+    # ---- laden ----
+    def reload(self, quiet=True):
+        with self.board.file_lock:
+            self.dir.mkdir(parents=True, exist_ok=True)
+            files = sorted(p for p in self.dir.iterdir() if p.is_file() and p.suffix.lower() in EXTENSIONS)
             assign = [None] * NSLOTS
             loose = []
             for p in files:
@@ -688,66 +803,472 @@ class Board:
             for p in loose:
                 if None in assign:
                     assign[assign.index(None)] = p
-
             slots = [None] * NSLOTS
             for i, p in enumerate(assign):
                 if p is None:
                     continue
                 try:
-                    auto = display_name(p)
-                    custom = self.labels.get(p.name)
                     data = load_sound(p)
+                    radio = bool(self.fx.get(p.name, {}).get("radio"))
+                    if radio:
+                        data = radio_effect(data)
                     try:
                         full = sf.info(str(p)).duration
                     except Exception:
                         full = 0.0
                     cut = full > MAX_SECONDS + 0.05
-                    if cut:
+                    if cut and not quiet:
                         print(f"  ! {p.name}: {full:.0f} s lang, gekürzt auf {MAX_SECONDS} s (MAX_SECONDS)")
-                    slots[i] = (custom or auto, p, data, auto, bool(custom), round(full) if cut else None)
+                    auto = display_name(p)
+                    custom = self.labels.get(p.name)
+                    slots[i] = {"name": custom or auto, "path": p, "data": data, "auto": auto,
+                                "custom": bool(custom), "full": round(full) if cut else None, "radio": radio}
                 except Exception as e:
                     print(f"  ! {p.name} konnte nicht geladen werden: {e}")
             self.slots = slots
             present = {p.name for p in files}
-            stale = [k for k in self.labels if k not in present]
-            if stale:                       # Datei weg/umbenannt -> Titel verfällt
-                for k in stale:
-                    del self.labels[k]
-                self._save_labels()
-            stale_art = [k for k, v in self.art.items()
-                         if k not in present or not isinstance(v, dict)
-                         or ("image" in v and not (IMG_DIR / str(v["image"])).exists())]
-            if stale_art:                   # Bild/Emoji gehört zu keinem Sound mehr
-                for k in stale_art:
-                    del self.art[k]
-                write_json(ART_FILE, self.art)
-        check_static(self.setup, self)
-
+            changed = False
+            for store in (self.labels, self.fx):
+                for k in [k for k in store if k not in present]:
+                    del store[k]
+                    changed = True
+            for k in [k for k, v in self.art.items() if k not in present or not isinstance(v, dict)
+                      or ("image" in v and not (IMG_DIR / str(v["image"])).exists())]:
+                del self.art[k]
+                changed = True
+            if changed:
+                self._save()
         if not quiet:
-            print(f"\nSounds aus {SOUND_DIR}:")
-            for i, s in enumerate(self.slots, 1):
-                if s:
-                    print(f"  {SLOTS[i - 1][0]:>3}: {s[0]}  ({len(s[2]) / SAMPLE_RATE:.1f} s)")
-            print()
+            n = sum(1 for s in self.slots if s)
+            print(f"  Seite „{self.name}“: {n} Sound(s)")
+
+    # ---- ändern ----
+    def set_label(self, idx, label):
+        s = self.slot(idx)
+        label = (label or "").strip()[:60]
+        with self.board.file_lock:
+            if label:
+                self.labels[s["path"].name] = label
+            else:
+                self.labels.pop(s["path"].name, None)
+            self._save()
+        self.reload()
+
+    def set_art(self, idx, image=None, emoji=None):
+        s = self.slot(idx)
+        if image:
+            if not IMAGE_NAME.match(image) or not (IMG_DIR / image).exists():
+                raise ValueError("Bild nicht in der Bibliothek gefunden")
+            (IMG_DIR / image).touch()
+            entry = {"image": image}
+        elif emoji:
+            e = clean_emoji(emoji)
+            if not e:
+                raise ValueError("Ungültiges Emoji")
+            entry = {"emoji": e}
+        else:
+            entry = None
+        with self.board.file_lock:
+            if entry:
+                self.art[s["path"].name] = entry
+            else:
+                self.art.pop(s["path"].name, None)
+            self._save()
+
+    def set_radio(self, idx, on):
+        s = self.slot(idx)
+        with self.board.file_lock:
+            if on:
+                self.fx[s["path"].name] = {"radio": True}
+            else:
+                self.fx.pop(s["path"].name, None)
+            self._save()
+        self.reload()
+
+    def store(self, idx, filename, data: bytes, label=None, use_meta=False, radio=False):
+        """Datei auf Taste idx legen; bisherige Datei nach _alt verschieben; Titel/Bild/Effekt neu."""
+        if not 0 <= idx < NSLOTS:
+            raise ValueError("Ungültiger Platz")
+        ext = Path(filename).suffix.lower()
+        if ext not in EXTENSIONS:
+            raise ValueError(f"Dateityp {ext or '?'} wird nicht unterstützt")
+        self.dir.mkdir(parents=True, exist_ok=True)
+        tmp = self.dir / f".tmp_{int(time.time() * 1000)}{ext}"
+        tmp.write_bytes(data)
+        try:
+            load_sound(tmp)
+        except Exception:
+            tmp.unlink(missing_ok=True)
+            raise ValueError("Datei ist keine lesbare Audiodatei (WAV, MP3, OGG, FLAC)")
+        title = (meta_title(tmp) if use_meta else None) or Path(filename).stem
+        title = re.sub(r"^[0-9][_\- ]", "", title)
+        base = re.sub(r"[^\w\-]+", "_", title).strip("_")[:60] or "sound"
+        target = self.dir / f"{SLOTS[idx][1]}_{base}{ext}"
+        with self.board.file_lock:
+            current = self.slots[idx]
+            if current and current["path"].exists():
+                old = self.dir / "_alt"
+                old.mkdir(exist_ok=True)
+                dest = old / current["path"].name
+                if dest.exists():
+                    dest = old / f"{current['path'].stem}_{int(time.time())}{current['path'].suffix}"
+                shutil.move(str(current["path"]), str(dest))
+            if target.exists():
+                target.unlink()
+            tmp.rename(target)
+            for store in (self.labels, self.art, self.fx):
+                if current:
+                    store.pop(current["path"].name, None)
+                store.pop(target.name, None)
+            if label and label.strip():
+                self.labels[target.name] = label.strip()[:60]
+            if radio:
+                self.fx[target.name] = {"radio": True}
+            self._save()
+        self.reload()
+        print(f"Seite „{self.name}“, Taste {SLOTS[idx][0]}: {display_name(target)}")
+
+    def slot_state(self, i):
+        s = self.slots[i]
+        a = self.art.get(s["path"].name, {}) if s else {}
+        img = a.get("image")
+        return {"slot": i + 1, "key": SLOTS[i][0],
+                "name": s["name"] if s else None,
+                "auto_name": s["auto"] if s else None,
+                "custom": s["custom"] if s else False,
+                "file": s["path"].name if s else None,
+                "seconds": round(len(s["data"]) / SAMPLE_RATE, 1) if s else None,
+                "full_seconds": s["full"] if s else None,
+                "radio": s["radio"] if s else False,
+                "image": f"/images/{img}" if img else None,
+                "emoji": a.get("emoji")}
+
+
+# ----------------------------------------------------------------------
+# Soundboard-Logik (von Hotkeys und Weboberfläche gemeinsam genutzt)
+# ----------------------------------------------------------------------
+
+class Board:
+    def __init__(self):
+        self.volume = SOUND_VOLUME
+        self.cable = Player()
+        self.monitor = Player() if MONITOR else None
+        self.ptt = PushToTalk(PTT_KEY) if PTT_KEY else None
+        self.file_lock = threading.RLock()
+        self.gen = 0
+        self.audio_ready = False
+        self.mic_ready = False
+        self.setup = Setup()
+        self.pages = []
+        self.current = 0
+        self.rec = None              # laufende Aufnahme (Liste von Blöcken) oder None
+        self.rec_started = 0.0
+        self.pending_rec = None      # fertige Aufnahme (mono) bis zum Speichern
+        self.busy = set()            # Seiten, die gerade per Vorlage befüllt werden
+
+    # ---- Seiten verwalten ----
+    @property
+    def page_obj(self):
+        return self.pages[self.current]
+
+    @property
+    def slots(self):
+        return self.page_obj.slots
+
+    def page(self, pid=None):
+        if not pid:
+            return self.page_obj
+        for p in self.pages:
+            if p.id == pid:
+                return p
+        raise ValueError("Seite nicht gefunden")
+
+    def _save_pages(self):
+        write_json(PAGES_FILE, {"pages": [p.meta() for p in self.pages], "current": self.page_obj.id})
+
+    def load_pages(self):
+        SOUND_DIR.mkdir(exist_ok=True)
+        first_run = not PAGES_FILE.exists()
+        migrated = self._migrate()
+        cfg = read_json(PAGES_FILE)
+        known = []
+        for m in cfg.get("pages", []):
+            pid = str(m.get("id", ""))
+            if pid and pid not in RESERVED_DIRS and (SOUND_DIR / pid).is_dir() and pid not in [k["id"] for k in known]:
+                known.append({"id": pid, "name": str(m.get("name") or pid)[:30],
+                              "template": m.get("template"), "filled": bool(m.get("filled"))})
+        # Ordner, die (noch) nicht in pages.json stehen – z. B. mitgeliefertes Kommando-Paket
+        extra = sorted(d.name for d in SOUND_DIR.iterdir()
+                       if d.is_dir() and d.name not in RESERVED_DIRS and not d.name.startswith((".", "_"))
+                       and d.name not in [k["id"] for k in known])
+        extra.sort(key=lambda n: (n != "Kommandos", n != "Eigene", n.lower()))
+        for name in extra:
+            has_sounds = any(p.suffix.lower() in EXTENSIONS for p in (SOUND_DIR / name).iterdir())
+            known.append({"id": name, "name": name, "template": "kommandos" if name == "Kommandos" else None,
+                          "filled": has_sounds})
+        if first_run:                                   # Erststart: Standardseiten sicherstellen
+            ids = [k["id"] for k in known]
+            if "Kommandos" not in ids:
+                known.insert(0, {"id": "Kommandos", "name": "Kommandos", "template": "kommandos", "filled": False})
+            if "Eigene" not in ids:
+                known.append({"id": "Eigene", "name": "Eigene", "template": None, "filled": False})
+        if not known:
+            known = [{"id": "Eigene", "name": "Eigene", "template": None, "filled": False}]
+        self.pages = [Page(self, k["id"], k["name"], k["template"], k["filled"]) for k in known]
+        cur = cfg.get("current") or ("Eigene" if migrated else None)
+        ids = [p.id for p in self.pages]
+        self.current = ids.index(cur) if cur in ids else 0
+        for p in self.pages:
+            p.reload(quiet=False)
+        self._save_pages()
+
+    def _migrate(self):
+        """Bis 2.0 lagen alle Sounds direkt in sounds/ – einmalig in die Seite „Eigene“ verschieben."""
+        top = [p for p in SOUND_DIR.iterdir() if p.is_file() and p.suffix.lower() in EXTENSIONS]
+        if not top or PAGES_FILE.exists():
+            return False
+        dest = SOUND_DIR / "Eigene"
+        dest.mkdir(exist_ok=True)
+        for p in top:
+            shutil.move(str(p), str(dest / p.name))
+        for name in ("labels.json", "art.json"):
+            if (SOUND_DIR / name).exists() and not (dest / name).exists():
+                shutil.move(str(SOUND_DIR / name), str(dest / name))
+        if (SOUND_DIR / "_alt").is_dir() and not (dest / "_alt").exists():
+            shutil.move(str(SOUND_DIR / "_alt"), str(dest / "_alt"))
+        print(f"Hinweis: {len(top)} vorhandene Sound(s) wurden in die Seite „Eigene“ übernommen.")
+        return True
+
+    def switch_page(self, pid=None, delta=0, announce=False):
+        if not self.pages:
+            return
+        if pid:
+            self.current = [p.id for p in self.pages].index(self.page(pid).id)
+        else:
+            self.current = (self.current + delta) % len(self.pages)
+        self._save_pages()
+        print(f"Seite: {self.page_obj.name}")
+        if announce:
+            threading.Thread(target=self.announce, args=(self.page_obj,), daemon=True).start()
+
+    def add_page(self, name, template=None):
+        name = (name or "").strip()[:30]
+        if not name:
+            raise ValueError("Bitte einen Namen eingeben")
+        pid, n = slug(name), 2
+        while pid in RESERVED_DIRS or (SOUND_DIR / pid).exists() or pid in [p.id for p in self.pages]:
+            pid, n = f"{slug(name)}_{n}", n + 1
+        page = Page(self, pid, name, template if template == "kommandos" else None, False)
+        page.reload()
+        self.pages.append(page)
+        self.current = len(self.pages) - 1
+        self._save_pages()
+        if page.template:
+            self.fill_template_async(page)
+        threading.Thread(target=self.ensure_announcement, args=(page,), daemon=True).start()
+        return page
+
+    def rename_page(self, pid, name):
+        name = (name or "").strip()[:30]
+        if not name:
+            raise ValueError("Bitte einen Namen eingeben")
+        self.page(pid).name = name
+        self._save_pages()
+        threading.Thread(target=self.ensure_announcement, args=(self.page(pid),), daemon=True).start()
+
+    def move_page(self, pid, delta):
+        page = self.page(pid)
+        i = self.pages.index(page)
+        j = max(0, min(len(self.pages) - 1, i + int(delta)))
+        cur = self.page_obj
+        self.pages.insert(j, self.pages.pop(i))
+        self.current = self.pages.index(cur)
+        self._save_pages()
+
+    def delete_page(self, pid):
+        if len(self.pages) <= 1:
+            raise ValueError("Die letzte Seite kann nicht gelöscht werden")
+        page = self.page(pid)
+        self.stop()
+        with self.file_lock:
+            TRASH_DIR.mkdir(exist_ok=True)
+            dest = TRASH_DIR / f"{page.id}_{time.strftime('%Y%m%d-%H%M%S')}"
+            shutil.move(str(page.dir), str(dest))
+        cur = self.page_obj
+        self.pages.remove(page)
+        self.current = self.pages.index(cur) if cur in self.pages else 0
+        self._save_pages()
+        print(f"Seite „{page.name}“ gelöscht (verschoben nach {dest}).")
+
+    # ---- Vorlage „Kommandos“ ----
+    def fill_template_async(self, page):
+        if page.id in self.busy or not tts_available():
+            return
+        self.busy.add(page.id)
+
+        def work():
+            try:
+                CACHE_DIR.mkdir(parents=True, exist_ok=True)
+                todo = []
+                for key, text in COMMAND_TEMPLATE:
+                    idx = [s[0] for s in SLOTS].index(key)
+                    if page.slots[idx] is None:
+                        todo.append((idx, text, CACHE_DIR / f"tpl_{page.id}_{idx}.wav"))
+                if todo:
+                    tts_batch([(t, p) for _, t, p in todo])
+                    for idx, text, p in todo:
+                        page.store(idx, f"{text}.wav", p.read_bytes(), radio=True)
+                        p.unlink(missing_ok=True)
+                page.filled = True
+                self._save_pages()
+                print(f"Seite „{page.name}“: Kommando-Vorlage erstellt.")
+            except Exception as e:
+                print(f"! Kommando-Vorlage für „{page.name}“ fehlgeschlagen: {e}")
+            finally:
+                self.busy.discard(page.id)
+
+        threading.Thread(target=work, daemon=True).start()
+
+    # ---- Seitenansage (nur im eigenen Headset) ----
+    def _announce_file(self, page):
+        h = hashlib.sha1(f"{page.name}|{TTS_LANG}|{TTS_RATE}".encode()).hexdigest()[:12]
+        return CACHE_DIR / f"seite_{h}.wav"
+
+    def ensure_announcement(self, page):
+        if not (ANNOUNCE_PAGES and tts_available()):
+            return None
+        f = self._announce_file(page)
+        if not f.exists():
+            try:
+                CACHE_DIR.mkdir(parents=True, exist_ok=True)
+                tts_batch([(page.name, f)])
+            except Exception:
+                return None
+        return f
+
+    def announce(self, page):
+        if not (ANNOUNCE_PAGES and self.monitor and self.audio_ready):
+            return
+        data = None
+        f = self.ensure_announcement(page)
+        if f:
+            try:
+                data = load_sound(f)
+            except Exception:
+                data = None
+        if data is None:
+            data = beeps(self.pages.index(page) + 1 if page in self.pages else 1)
+        self.monitor.play(data, None, exclusive=False)
+
+    # ---- Bilder ----
+    def add_image(self, data: bytes) -> str:
+        if len(data) > MAX_IMAGE_BYTES:
+            raise ValueError("Bild ist zu groß (max. 3 MB)")
+        kind = image_type(data)
+        if not kind:
+            raise ValueError("Keine Bilddatei (PNG, JPG, GIF oder WebP)")
+        name = f"{hashlib.sha256(data).hexdigest()[:16]}.{kind}"
+        IMG_DIR.mkdir(parents=True, exist_ok=True)
+        if not (IMG_DIR / name).exists():
+            (IMG_DIR / name).write_bytes(data)
+        return name
+
+    def list_images(self):
+        if not IMG_DIR.exists():
+            return []
+        files = [p for p in IMG_DIR.iterdir() if IMAGE_NAME.match(p.name)]
+        return [p.name for p in sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)]
+
+    # ---- Aufnahme ----
+    def rec_start(self):
+        if not (self.audio_ready and self.mic_ready):
+            raise ValueError("Aufnahme nicht möglich: Mikrofon läuft nicht (siehe Einrichtungs-Check)")
+        self.pending_rec = None
+        self.rec_started = time.time()
+        self.rec = []
+        started = self.rec_started
+
+        def auto_stop():
+            if self.rec is not None and self.rec_started == started:
+                try:
+                    self.rec_stop()
+                except Exception:
+                    pass
+
+        t = threading.Timer(RECORD_MAX_SECONDS, auto_stop)
+        t.daemon = True
+        t.start()
+
+    def rec_push(self, block):
+        rec = self.rec
+        if rec is not None:
+            rec.append(block.copy())
+
+    def rec_stop(self):
+        if self.rec is None:
+            if self.pending_rec is not None:
+                return len(self.pending_rec) / SAMPLE_RATE
+            raise ValueError("Es läuft keine Aufnahme")
+        blocks, self.rec = self.rec, None
+        mono = np.concatenate(blocks) if blocks else np.zeros(0, np.float32)
+        self.pending_rec = trim_silence(mono)
+        return len(self.pending_rec) / SAMPLE_RATE
+
+    def rec_preview(self, radio=False):
+        if self.pending_rec is None:
+            raise ValueError("Keine Aufnahme vorhanden")
+        if not (self.monitor and self.audio_ready):
+            raise ValueError("Mithören ist ausgeschaltet")
+        data = np.repeat(self.pending_rec[:, None], 2, axis=1).astype(np.float32)
+        peak = float(np.max(np.abs(data))) or 1.0
+        data = data / peak * NORMALIZE_PEAK
+        if radio:
+            data = radio_effect(data)
+        self.monitor.play(data, None)
+
+    def rec_save(self, page, idx, label=None, radio=False):
+        if self.pending_rec is None:
+            raise ValueError("Keine Aufnahme vorhanden")
+        title = (label or "").strip() or f"Aufnahme {time.strftime('%H-%M-%S')}"
+        page.store(idx, f"{title}.wav", wav_bytes(self.pending_rec), label=None, radio=radio)
+        self.pending_rec = None
+
+    # ---- Text → Sprache ----
+    def tts_save(self, page, idx, text, label=None, radio=False):
+        text = (text or "").strip()
+        if not text or len(text) > 200:
+            raise ValueError("Bitte einen Text mit höchstens 200 Zeichen eingeben")
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        tmp = CACHE_DIR / f"tts_{int(time.time() * 1000)}.wav"
+        try:
+            tts_batch([(text, tmp)])
+            page.store(idx, f"{text[:60]}.wav", tmp.read_bytes(), label=label, radio=radio)
+        finally:
+            tmp.unlink(missing_ok=True)
 
     # ---- Wiedergabe ----
     def play(self, idx):
-        s = self.slots[idx] if 0 <= idx < NSLOTS else None
+        page = self.page_obj
+        s = page.slots[idx] if 0 <= idx < NSLOTS else None
         if not s:
             return False
         if not self.audio_ready:
             print("! Audio läuft nicht - siehe Anleitung in der Weboberfläche.")
             return False
+        if self.rec is not None:
+            return False                       # während einer Aufnahme nichts abspielen
         self.gen += 1
         gen = self.gen
-        pre = self.ptt.begin(len(s[2]) / SAMPLE_RATE) if self.ptt else 0.0
+        data = s["data"]
+        pre = self.ptt.begin(len(data) / SAMPLE_RATE) if self.ptt else 0.0
+        key = (page.id, idx)
 
         def start():
-            if EXCLUSIVE and gen != self.gen:      # inzwischen anderer Sound/Stopp
+            if EXCLUSIVE and gen != self.gen:
                 return
-            self.cable.play(s[2], idx)
+            self.cable.play(data, key)
             if self.monitor:
-                self.monitor.play(s[2], idx)
+                self.monitor.play(data, key)
 
         if pre > 0:
             t = threading.Timer(pre, start)
@@ -755,11 +1276,10 @@ class Board:
             t.start()
         else:
             start()
-        print(f"> {s[0]}")
+        print(f"> {s['name']}")
         return True
 
     def test_tone(self):
-        """Kurzer Piepton ins Kabel (ohne Push-to-Talk) - zum Prüfen des Pegels."""
         if not self.audio_ready:
             return False
         t = np.arange(int(SAMPLE_RATE * 0.8)) / SAMPLE_RATE
@@ -768,14 +1288,13 @@ class Board:
         fade = np.minimum(1.0, np.minimum(t, t[-1] - t) / 0.02)
         tone = np.repeat((tone * fade)[:, None], 2, axis=1).astype(np.float32)
         self.gen += 1
-        self.cable.play(tone, -1)
+        self.cable.play(tone, None)
         if self.monitor:
-            self.monitor.play(tone, -1)
+            self.monitor.play(tone, None)
         return True
 
     def toggle(self, idx):
-        """Läuft der Sound dieses Platzes gerade, stoppen - sonst abspielen."""
-        if idx in self.cable.active_slots():
+        if (self.page_obj.id, idx) in self.cable.active_slots():
             self.stop()
             return True
         return self.play(idx)
@@ -791,59 +1310,14 @@ class Board:
     def set_volume(self, v):
         self.volume = min(MAX_VOLUME, max(0.0, float(v)))
 
-    # ---- Platz neu belegen ----
-    def store(self, idx, filename, data: bytes, label=None, use_meta=False):
-        """Datei auf Platz idx legen; bisherige Datei des Platzes nach _alt verschieben."""
-        ext = Path(filename).suffix.lower()
-        if ext not in EXTENSIONS:
-            raise ValueError(f"Dateityp {ext or '?'} wird nicht unterstützt")
-        # erst prüfen, ob die Datei lesbar ist
-        tmp = SOUND_DIR / f".tmp_{int(time.time() * 1000)}{ext}"
-        SOUND_DIR.mkdir(exist_ok=True)
-        tmp.write_bytes(data)
-        try:
-            load_sound(tmp)
-        except Exception:
-            tmp.unlink(missing_ok=True)
-            raise ValueError("Datei ist keine lesbare Audiodatei (WAV, MP3, OGG, FLAC)")
-
-        # Dateiname = automatischer Titel (Seitentitel / Metadaten / ursprünglicher Name)
-        title = (meta_title(tmp) if use_meta else None) or Path(filename).stem
-        title = re.sub(r"^[0-9][_\- ]", "", title)            # alte Ziffern-Präfixe entfernen
-        base = re.sub(r"[^\w\-]+", "_", title).strip("_")[:60] or "sound"
-        target = SOUND_DIR / f"{SLOTS[idx][1]}_{base}{ext}"
-
-        with self.file_lock:
-            current = self.slots[idx]
-            if current and current[1].exists():
-                OLD_DIR.mkdir(exist_ok=True)
-                dest = OLD_DIR / current[1].name
-                if dest.exists():
-                    dest = OLD_DIR / f"{current[1].stem}_{int(time.time())}{current[1].suffix}"
-                shutil.move(str(current[1]), str(dest))
-            if target.exists():
-                target.unlink()
-            tmp.rename(target)
-            # neuer Sound -> alter eigener Titel verfällt; ggf. neuen setzen
-            if current:
-                self.labels.pop(current[1].name, None)
-            self.labels.pop(target.name, None)
-            if current:                       # neuer Sound -> Bild/Emoji zurücksetzen
-                self.art.pop(current[1].name, None)
-            self.art.pop(target.name, None)
-            write_json(ART_FILE, self.art)
-            if label and label.strip():
-                self.labels[target.name] = label.strip()[:60]
-            self._save_labels()
-        self.reload(quiet=True)
-        print(f"Platz {SLOTS[idx][0]}: {display_name(target)}")
-
-    def _art_state(self, s):
-        a = self.art.get(s[1].name, {}) if s else {}
-        img = a.get("image")
-        return {"image": f"/images/{img}" if img else None, "emoji": a.get("emoji")}
+    def reload(self, quiet=False):
+        for p in self.pages:
+            p.reload(quiet=quiet)
+        check_static(self.setup, self)
 
     def state(self):
+        page = self.page_obj
+        active = self.cable.active_slots()
         return {
             "version": VERSION,
             "audio": self.audio_ready,
@@ -851,19 +1325,16 @@ class Board:
             "volume": self.volume,
             "max_volume": MAX_VOLUME,
             "update": update_state(),
-            "playing": self.cable.active_slots(),
-            "slots": [
-                {"slot": i + 1,
-                 "key": SLOTS[i][0],
-                 "name": s[0] if s else None,
-                 "auto_name": s[3] if s else None,
-                 "custom": s[4] if s else False,
-                 "file": s[1].name if s else None,
-                 "seconds": round(len(s[2]) / SAMPLE_RATE, 1) if s else None,
-                 "full_seconds": s[5] if s else None,
-                 **self._art_state(s)}
-                for i, s in enumerate(self.slots)
-            ],
+            "tts": tts_available(),
+            "mic": self.audio_ready and self.mic_ready,
+            "recording": self.rec is not None,
+            "rec_seconds": round(time.time() - self.rec_started, 1) if self.rec is not None else None,
+            "pending_rec": round(len(self.pending_rec) / SAMPLE_RATE, 1) if self.pending_rec is not None else None,
+            "pages": [{"id": p.id, "name": p.name, "count": sum(1 for s in p.slots if s),
+                       "busy": p.id in self.busy} for p in self.pages],
+            "page": page.id,
+            "playing": [k[1] for k in active if isinstance(k, tuple) and k[0] == page.id],
+            "slots": [page.slot_state(i) for i in range(NSLOTS)],
         }
 
 
@@ -979,7 +1450,7 @@ def update_loop(setup):
 class WebServer(ThreadingHTTPServer):
     # Windows erlaubt mit SO_REUSEADDR mehrere Programme auf demselben Port -> abschalten,
     # sonst läuft unbemerkt ein zweites Soundboard und jeder Sound kommt doppelt.
-    allow_reuse_address = False
+    allow_reuse_address = sys.platform != "win32"
     daemon_threads = True
 
 
@@ -992,7 +1463,7 @@ def already_running() -> bool:
 
 
 def make_handler(board: Board, engine=None):
-    page = (BASE_DIR / "web.html").read_bytes()
+    page_html = (BASE_DIR / "web.html").read_bytes()
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, *_):
@@ -1014,21 +1485,26 @@ def make_handler(board: Board, engine=None):
                 raise ValueError("Datei ist zu groß")
             return self.rfile.read(n)
 
+        def json(self):
+            raw = self.body()
+            return json.loads(raw) if raw else {}
+
         def do_GET(self):
-            if self.path in ("/", "/index.html"):
-                self.send(200, page, "text/html; charset=utf-8")
-            elif self.path == "/api/state":
+            path = urllib.parse.urlparse(self.path).path
+            if path in ("/", "/index.html"):
+                self.send(200, page_html, "text/html; charset=utf-8")
+            elif path == "/api/state":
                 self.send(200, board.state())
-            elif self.path == "/api/setup":
+            elif path == "/api/setup":
                 self.send(200, setup_info(board))
-            elif self.path == "/api/images":
+            elif path == "/api/images":
                 self.send(200, {"images": board.list_images()})
-            elif self.path.startswith("/images/"):
-                name = self.path[len("/images/"):].split("?", 1)[0]
-                path = IMG_DIR / name
-                if not IMAGE_NAME.match(name) or not path.exists():
+            elif path.startswith("/images/"):
+                name = path[len("/images/"):]
+                file = IMG_DIR / name
+                if not IMAGE_NAME.match(name) or not file.exists():
                     return self.send(404, {"error": "nicht gefunden"})
-                data = path.read_bytes()
+                data = file.read_bytes()
                 self.send_response(200)
                 self.send_header("Content-Type", IMAGE_TYPES[name.rsplit(".", 1)[1]])
                 self.send_header("Content-Length", str(len(data)))
@@ -1045,75 +1521,136 @@ def make_handler(board: Board, engine=None):
             if origin and urllib.parse.urlparse(origin).netloc != host:
                 return self.send(403, {"error": "fremder Ursprung"})
 
-            parts = self.path.strip("/").split("/")
+            url = urllib.parse.urlparse(self.path)
+            parts = url.path.strip("/").split("/")
+            pid = urllib.parse.parse_qs(url.query).get("p", [None])[0]
+            ok = lambda: self.send(200, board.state())          # noqa: E731
+
+            def slot_idx(v):
+                i = int(v) - 1
+                if not 0 <= i < NSLOTS:
+                    raise ValueError("Ungültiger Platz")
+                return i
+
             try:
+                # ---- Wiedergabe ----
                 if parts[:2] == ["api", "play"] and len(parts) == 3:
-                    ok = board.toggle(int(parts[2]) - 1)
-                    return self.send(200 if ok else 404, board.state())
+                    played = board.toggle(slot_idx(parts[2]))
+                    return self.send(200 if played else 404, board.state())
+                if parts == ["api", "stop"]:
+                    board.stop()
+                    return ok()
+                if parts == ["api", "volume"]:
+                    board.set_volume(self.json()["value"])
+                    return ok()
+                if parts == ["api", "reload"]:
+                    board.reload()
+                    return ok()
+
+                # ---- Seiten ----
+                if parts == ["api", "page", "switch"]:
+                    req = self.json()
+                    board.switch_page(pid=req.get("id"), delta=int(req.get("delta", 0)))
+                    return ok()
+                if parts == ["api", "page", "add"]:
+                    req = self.json()
+                    board.add_page(req.get("name"), req.get("template"))
+                    return ok()
+                if parts == ["api", "page", "rename"]:
+                    req = self.json()
+                    board.rename_page(req.get("id"), req.get("name"))
+                    return ok()
+                if parts == ["api", "page", "move"]:
+                    req = self.json()
+                    board.move_page(req.get("id"), req.get("delta", 0))
+                    return ok()
+                if parts == ["api", "page", "delete"]:
+                    board.delete_page(self.json().get("id"))
+                    return ok()
+                if parts == ["api", "page", "fill"]:
+                    page = board.page(self.json().get("id"))
+                    if not tts_available():
+                        raise ValueError("Text-to-Speech gibt es nur unter Windows")
+                    board.fill_template_async(page)
+                    return ok()
+
+                # ---- Tasten belegen (Seite über ?p=…) ----
+                page = board.page(pid)
+                if parts == ["api", "import"]:
+                    req = self.json()
+                    name, data = download_sound(req["url"])
+                    page.store(slot_idx(req["slot"]), name, data, req.get("label"), radio=bool(req.get("radio")))
+                    return ok()
+                if parts[:2] == ["api", "upload"] and len(parts) == 3:
+                    name = urllib.parse.unquote(self.headers.get("X-Filename", "sound.wav"))
+                    radio = self.headers.get("X-Radio") == "1"
+                    page.store(slot_idx(parts[2]), name, self.body(), use_meta=True, radio=radio)
+                    return ok()
+                if parts == ["api", "tts"]:
+                    req = self.json()
+                    board.tts_save(page, slot_idx(req["slot"]), req.get("text"), req.get("label"),
+                                   radio=bool(req.get("radio")))
+                    return ok()
+                if parts == ["api", "label"]:
+                    req = self.json()
+                    page.set_label(slot_idx(req["slot"]), req.get("label", ""))
+                    return ok()
+                if parts == ["api", "radio"]:
+                    req = self.json()
+                    page.set_radio(slot_idx(req["slot"]), bool(req.get("on")))
+                    return ok()
+                if parts[:2] == ["api", "image"] and len(parts) == 3:
+                    name = board.add_image(self.body())
+                    page.set_art(slot_idx(parts[2]), image=name)
+                    return ok()
+                if parts == ["api", "art"]:
+                    req = self.json()
+                    page.set_art(slot_idx(req["slot"]), image=req.get("image"), emoji=req.get("emoji"))
+                    return ok()
+                if parts == ["api", "fetchimage"]:
+                    src = self.json()["url"].strip()
+                    if not re.match(r"^https?://", src):
+                        src = "https://" + src
+                    data, _ = fetch(src, limit=8 * 1024 * 1024)
+                    kind = image_type(data)
+                    if not kind:
+                        raise ValueError("Der Link zeigt nicht direkt auf ein Bild (PNG, JPG, GIF, WebP)")
+                    return self.send(200, data, IMAGE_TYPES[kind])
+
+                # ---- Aufnahme ----
+                if parts == ["api", "record", "start"]:
+                    board.rec_start()
+                    return ok()
+                if parts == ["api", "record", "stop"]:
+                    board.rec_stop()
+                    return ok()
+                if parts == ["api", "record", "preview"]:
+                    board.rec_preview(radio=bool(self.json().get("radio")))
+                    return ok()
+                if parts == ["api", "record", "discard"]:
+                    board.rec, board.pending_rec = None, None
+                    return ok()
+                if parts == ["api", "record", "save"]:
+                    req = self.json()
+                    board.rec_save(page, slot_idx(req["slot"]), req.get("label"), radio=bool(req.get("radio")))
+                    return ok()
+
+                # ---- Einrichtung / Sonstiges ----
                 if parts == ["api", "setup", "check"]:
                     devs = check_devices(board.setup, refresh=not board.audio_ready)
                     if not board.audio_ready and engine is not None:
                         engine.start(devs)
                     board.setup.print()
                     return self.send(200, setup_info(board))
+                if parts == ["api", "test"]:
+                    if not board.test_tone():
+                        raise ValueError("Audio läuft nicht – siehe Einrichtungs-Check")
+                    return self.send(200, setup_info(board))
                 if parts == ["api", "quit"]:
                     self.send(200, {"ok": True})
                     print("\nBeenden angefordert (Spiel geschlossen).")
                     QUIT.set()
                     return
-                if parts == ["api", "test"]:
-                    if not board.test_tone():
-                        raise ValueError("Audio läuft nicht – siehe Einrichtungs-Check")
-                    return self.send(200, setup_info(board))
-                if parts == ["api", "stop"]:
-                    board.stop()
-                    return self.send(200, board.state())
-                if parts == ["api", "reload"]:
-                    board.reload()
-                    return self.send(200, board.state())
-                if parts == ["api", "volume"]:
-                    board.set_volume(json.loads(self.body())["value"])
-                    return self.send(200, board.state())
-                if parts == ["api", "import"]:
-                    req = json.loads(self.body())
-                    idx = int(req["slot"]) - 1
-                    if not 0 <= idx < NSLOTS:
-                        raise ValueError("Ungültiger Platz")
-                    name, data = download_sound(req["url"])
-                    board.store(idx, name, data, req.get("label"))
-                    return self.send(200, board.state())
-                if parts == ["api", "label"]:
-                    req = json.loads(self.body())
-                    board.set_label(int(req["slot"]) - 1, req.get("label", ""))
-                    return self.send(200, board.state())
-                if parts[:2] == ["api", "image"] and len(parts) == 3:
-                    idx = int(parts[2]) - 1
-                    if not 0 <= idx < NSLOTS:
-                        raise ValueError("Ungültiger Platz")
-                    name = board.add_image(self.body())
-                    board.set_art(idx, image=name)
-                    return self.send(200, board.state())
-                if parts == ["api", "art"]:
-                    req = json.loads(self.body())
-                    board.set_art(int(req["slot"]) - 1, image=req.get("image"), emoji=req.get("emoji"))
-                    return self.send(200, board.state())
-                if parts == ["api", "fetchimage"]:
-                    # Bild von einem Link holen; verkleinert wird danach im Browser
-                    url = json.loads(self.body())["url"].strip()
-                    if not re.match(r"^https?://", url):
-                        url = "https://" + url
-                    data, _ = fetch(url, limit=8 * 1024 * 1024)
-                    kind = image_type(data)
-                    if not kind:
-                        raise ValueError("Der Link zeigt nicht direkt auf ein Bild (PNG, JPG, GIF, WebP)")
-                    return self.send(200, data, IMAGE_TYPES[kind])
-                if parts[:2] == ["api", "upload"] and len(parts) == 3:
-                    idx = int(parts[2]) - 1
-                    if not 0 <= idx < NSLOTS:
-                        raise ValueError("Ungültiger Platz")
-                    name = urllib.parse.unquote(self.headers.get("X-Filename", "sound.wav"))
-                    board.store(idx, name, self.body(), use_meta=True)
-                    return self.send(200, board.state())
                 self.send(404, {"error": "nicht gefunden"})
             except Exception as e:
                 self.send(400, {"error": str(e)})
@@ -1122,6 +1659,7 @@ def make_handler(board: Board, engine=None):
 
 
 def setup_info(board):
+    check_static(board.setup, board)
     return {
         "version": VERSION,
         "audio": board.audio_ready,
@@ -1160,7 +1698,8 @@ def main():
         time.sleep(6)
         return
     board = Board()
-    board.reload()
+    print("\nSeiten:")
+    board.load_pages()
     check_static(board.setup, board)
 
     # ---------- Geräte prüfen, Audio starten ----------
@@ -1187,9 +1726,16 @@ def main():
         ctypes.windll.user32.keybd_event(0x90, 0x45, ext | up, 0)
 
     def on_event(e):
-        if not e.is_keypad:
-            return
         sc = e.scan_code
+        if not e.is_keypad:
+            # eigene Bild ↑ / Bild ↓ -> Seite wechseln (Numpad 9/3 bleiben Sound-Tasten)
+            if PAGE_KEYS and sc in (PAGE_UP_SCAN, PAGE_DOWN_SCAN):
+                if e.event_type == keyboard.KEY_UP:
+                    held.discard(("page", sc))
+                elif ("page", sc) not in held:
+                    held.add(("page", sc))
+                    board.switch_page(delta=-1 if sc == PAGE_UP_SCAN else 1, announce=True)
+            return
         if sc == NUMLOCK_SCAN and numlock_echo[0] > 0:
             numlock_echo[0] -= 1
             return
@@ -1227,6 +1773,15 @@ def main():
     threading.Thread(target=server.serve_forever, daemon=True).start()
     url = f"http://localhost:{WEB_PORT}"
     print(f"Weboberfläche: {url}")
+    def background():
+        check_tts(board.setup)
+        for p in board.pages:                    # Kommando-Vorlage beim ersten Start füllen
+            if p.template == "kommandos" and not p.filled and not any(p.slots):
+                board.fill_template_async(p)
+        for p in board.pages:                    # Seitenansagen vorbereiten
+            board.ensure_announcement(p)
+
+    threading.Thread(target=background, daemon=True).start()
     if CHECK_UPDATES:
         threading.Thread(target=update_loop, args=(board.setup,), daemon=True).start()
     else:

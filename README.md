@@ -16,8 +16,10 @@ A soundboard for the proximity voice chat in **WARDOGS** (Bulkhead) – meme sou
 ### Was es kann
 
 - **16 Sound-Tasten** auf dem Nummernblock (0–9, `,` `/` `*` `-` `+`, NumLock), Numpad-Enter stoppt alles
+- **Mehrere Seiten** (z. B. „Kommandos“, „Eigene“, „Memes“) – umschalten mit **Bild ↑ / Bild ↓**, der Seitenname wird im eigenen Headset angesagt
+- **Kommando-Vorlage:** 16 typische Ansagen („Feind links!“, „Granate!“ …) per Text-to-Speech mit **Funk-Effekt**
 - **Weboberfläche** im Browser (`http://localhost:8765`) – auch vom Handy aus bedienbar
-- **Sounds von [Myinstants](https://www.myinstants.com) per Link** übernehmen oder eigene Dateien (WAV, MP3, OGG, FLAC) per Drag & Drop
+- **Sounds von [Myinstants](https://www.myinstants.com) per Link**, eigene Dateien (WAV, MP3, OGG, FLAC), **eigene Aufnahmen** übers Mikrofon oder **Text → Sprache** (Windows-Stimme)
 - **Bilder oder Emojis** als Kachelhintergrund – Bilder bleiben in einer Bibliothek und lassen sich wiederverwenden
 - **Eigene Titel** je Taste, Lautstärke bis 200 % mit Soft-Limiter, leise Clips werden automatisch angehoben
 - **Push-to-Talk automatisch:** hält beim Abspielen die Sprechtaste (Standard `K`) gedrückt – nur wenn WARDOGS das aktive Fenster ist
@@ -63,8 +65,10 @@ Das Spiel wird **nicht verändert** – keine Dateien, kein Speicherzugriff. Das
 ### Features
 
 - **16 sound keys** on the numpad (0–9, `,` `/` `*` `-` `+`, NumLock), numpad Enter stops everything
+- **Multiple pages** (e.g. commands, own sounds, memes) – switch with **Page Up / Page Down**, the page name is announced in your own headset
+- **Command template:** 16 typical callouts via text-to-speech with a **radio effect**
 - **Web interface** in your browser (`http://localhost:8765`) – works from your phone too
-- **Grab sounds from [Myinstants](https://www.myinstants.com) by link** or drag & drop your own files (WAV, MP3, OGG, FLAC)
+- **Grab sounds from [Myinstants](https://www.myinstants.com) by link**, use your own files, **record** via your microphone or use **text-to-speech** (Windows voices)
 - **Images or emojis** as tile backgrounds – images are kept in a library for reuse
 - **Custom titles** per key, volume up to 200 % with soft limiter, quiet clips are normalized automatically
 - **Automatic push-to-talk:** holds your voice key (default `K`) while a sound plays – only while WARDOGS is the active window

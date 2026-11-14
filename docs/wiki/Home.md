@@ -18,6 +18,7 @@ Das Spiel wird **nicht verändert**. Das Soundboard mischt dein Mikrofon mit den
 |---|---|
 | [Installation](Installation) | Download, Python, Pakete, VB-Cable, erster Start |
 | [Spiel und Discord einrichten](Spiel-und-Discord-einrichten) | Mikrofon in WARDOGS, Push-to-Talk, Discord |
+| [Seiten und Kommandos](Seiten-und-Kommandos) | Seiten, Bild ↑/↓, Kommando-Vorlage, Aufnahme, Text → Sprache, Funk-Effekt |
 | [Sounds verwalten](Sounds-verwalten) | Myinstants-Links, eigene Dateien, Titel, Bilder und Emojis, Lautstärke |
 | [Bedienung](Bedienung) | Tastenbelegung, Weboberfläche, Bedienung vom Handy |
 | [Desktopverknüpfung](Desktopverknuepfung) | Soundboard und WARDOGS mit einem Klick starten |

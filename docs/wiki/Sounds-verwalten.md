@@ -1,6 +1,6 @@
 # Sounds verwalten
 
-Die Oberfläche ist wie ein Nummernblock aufgebaut – jede Kachel ist eine Numpad-Taste, insgesamt **16 Plätze**.
+Die Oberfläche ist wie ein Nummernblock aufgebaut – jede Kachel ist eine Numpad-Taste, **16 Plätze pro Seite**. Alles auf dieser Seite gilt für die gerade gewählte [Seite](Seiten-und-Kommandos).
 
 ## Sound von Myinstants holen
 
@@ -12,6 +12,10 @@ Die Oberfläche ist wie ein Nummernblock aufgebaut – jede Kachel ist eine Nump
 <p align="center"><img src="https://raw.githubusercontent.com/TARLoki/wardogs-soundboard/main/docs/images/dialog.png" width="400" alt="Dialog"></p>
 
 Bleibt das Titelfeld leer, wird automatisch der Titel der Myinstants-Seite verwendet.
+
+## Weitere Quellen
+
+Neben Myinstants-Links gibt es im Dialog **Datei …**, **● Aufnehmen** (übers Mikrofon) und **Text → Sprache** (Windows-Stimme), jeweils optional mit **Funk-Effekt** – Details unter [Seiten und Kommandos](Seiten-und-Kommandos#quellen-für-sounds).
 
 ## Eigene Dateien
 
@@ -44,13 +48,13 @@ Schneller geht's per **Drag & Drop**: eine Bilddatei – oder ein Bild aus einem
 - Alle Bilder bleiben in der **Bibliothek** `sounds\images` und lassen sich jederzeit wieder zuweisen. Gleiche Bilder werden nur einmal gespeichert.
 - Bilder werden beim Speichern automatisch verkleinert (max. 360 Pixel), die Bibliothek bleibt dadurch klein.
 - Bild/Emoji geht nur auf Tasten, auf denen schon ein Sound liegt.
-- Die Zuordnung steht in `sounds\art.json`. Nicht mehr benötigte Bilder kannst du einfach aus `sounds\images` löschen.
+- Die Zuordnung steht je Seite in `art.json`. Nicht mehr benötigte Bilder kannst du einfach aus `sounds\images` löschen.
 
 ## Sound austauschen
 
 Neuen Link im Dialog eintragen oder neue Datei auf die Kachel ziehen.
 
-- Der alte Sound wird **nicht gelöscht**, sondern nach `sounds\_alt` verschoben.
+- Der alte Sound wird **nicht gelöscht**, sondern nach `sounds\<Seite>\_alt` verschoben.
 - Eigener Titel, Bild und Emoji werden beim Austausch zurückgesetzt (außer du legst sie im selben Dialog gleich neu fest).
 
 ## Lautstärke
@@ -61,7 +65,7 @@ Neuen Link im Dialog eintragen oder neue Datei auf die Kachel ziehen.
 
 ## Dateien im Ordner `sounds`
 
-Du kannst Dateien auch direkt in den Ordner `sounds` legen und auf **„Ordner neu laden“** klicken. Der Anfang des Dateinamens bestimmt die Taste:
+Jede Seite hat einen eigenen Unterordner, z. B. `sounds\Eigene`. Du kannst Dateien auch direkt dort hineinlegen und auf **„Ordner neu laden“** klicken. Der Anfang des Dateinamens bestimmt die Taste:
 
 | Präfix | Taste | Präfix | Taste |
 |---|---|---|---|
@@ -70,6 +74,6 @@ Du kannst Dateien auch direkt in den Ordner `sounds` legen und auf **„Ordner n
 | `komma_` | `,` | `plus_` | `+` |
 | `geteilt_` | `/` | `num_` | NumLock |
 
-Beispiel: `plus_airhorn.mp3`. Dateien ohne Präfix füllen freie Plätze alphabetisch. Eigene Titel stehen in `sounds\labels.json`.
+Beispiel: `sounds\Eigene\plus_airhorn.mp3`. Dateien ohne Präfix füllen freie Plätze alphabetisch. Eigene Titel, Bilder/Emojis und Funk-Effekt stehen je Seite in `labels.json`, `art.json` und `fx.json`.
 
 Sounds über **90 Sekunden** werden gekürzt (`MAX_SECONDS`), damit niemand versehentlich ganze Lieder abspielt.

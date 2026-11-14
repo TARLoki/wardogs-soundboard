@@ -69,6 +69,28 @@
     opacity: .28; pointer-events: none; z-index: 0; overflow: hidden; }
   .tile.has-emoji .num, .tile.has-emoji .name, .tile.has-emoji .meta { text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 8px rgba(0,0,0,.7); }
 
+  [hidden] { display: none !important; }
+
+  /* Seiten */
+  .pagebar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ptab { padding: 6px 13px; border-radius: 99px; font-size: 14px; }
+  .ptab.active { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .ptab .cnt { font-size: 11px; opacity: .7; margin-left: 5px; }
+  .ptab.busy .cnt::after { content: " …"; }
+  .pagebar .pbtn { padding: 6px 11px; border-radius: 99px; }
+  .pagehint { margin-left: auto; font-size: 12px; color: var(--muted); }
+  .srcrow { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 8px; }
+  .srcrow button { padding: 5px 10px; font-size: 13px; }
+  #recBtn.rec { background: var(--danger); border-color: var(--danger); color: #fff; }
+  #recInfo { font-size: 13px; color: var(--muted); }
+  dialog label.chk { display: flex; align-items: center; gap: 8px; font-weight: 400; margin: 12px 0 0; font-size: 14px; }
+  .chk input { width: 18px; height: 18px; accent-color: var(--accent); }
+  .radios label { display: flex; gap: 10px; align-items: flex-start; font-weight: 400 !important; font-size: 14px !important; margin: 8px 0 !important; }
+  .radios input { margin-top: 3px; accent-color: var(--accent); }
+  button.danger { color: #ff9b97; border-color: #5a2a2a; }
+  button.danger.armed { background: var(--danger); color: #fff; }
+  .tile .fx { font-size: 14px; margin-left: 6px; vertical-align: 4px; opacity: .85; }
+
   /* Bild/Emoji im Dialog */
   dialog { max-height: 92vh; overflow-y: auto; }
   .art { display: flex; gap: 12px; align-items: center; }
@@ -168,6 +190,8 @@
     .meta { display: none; }
     .edit { top: 4px; right: 4px; padding: 0 6px; }
     .emoji { font-size: 44px; }
+    .pagehint { display: none; }
+    .tile .fx { font-size: 11px; margin-left: 3px; vertical-align: 3px; }
     dialog .two { flex-direction: column; }
     #emojiIn { flex: 1 1 auto !important; }
   }
@@ -207,11 +231,12 @@
       Das ist der Preis für die Lautstärke – am besten herantasten.</p>
   </div>
 
+  <div class="pagebar" id="pagebar"></div>
   <div class="grid" id="grid"></div>
 
   <p class="hint">
-    Klick spielt ab, nochmal klicken stoppt. Über <b>✎</b> Sound, Titel, Bild oder Emoji festlegen –
-    Sound- und Bilddateien lassen sich auch direkt auf eine Kachel ziehen. Ersetzte Sounds landen in <b>sounds/_alt</b>.
+    Klick spielt ab, nochmal klicken stoppt. Über <b>✎</b> Sound (Link, Datei, Aufnahme, Text → Sprache), Titel, Bild oder Emoji festlegen –
+    Sound- und Bilddateien lassen sich auch direkt auf eine Kachel ziehen. Ersetzte Sounds landen in <b>sounds/&lt;Seite&gt;/_alt</b>.
   </p>
   </section>
 
@@ -303,6 +328,8 @@ python -m pip install -r requirements.txt</pre>
           <li>Oder Dateien in den Ordner <code>sounds</code> legen – Präfix bestimmt die Taste:
             <code>1_</code>…<code>9_</code>, <code>0_</code>, <code>komma_</code>, <code>geteilt_</code>, <code>mal_</code>,
             <code>minus_</code>, <code>plus_</code>, <code>num_</code>.</li>
+          <li>Weitere Quellen im Dialog: <b>Datei …</b>, <b>● Aufnehmen</b> (über dein Mikrofon, Stille wird abgeschnitten)
+            und <b>Text → Sprache</b> (Windows-Stimme). Mit <b>Funk-Effekt</b> klingt es wie über Funkgerät.</li>
           <li>Bild oder Emoji: über <b>✎</b> (Datei, Strg+V, Bild-Link, Bibliothek) oder Bild direkt auf die Kachel ziehen.
             Es hängt am Sound; alle Bilder bleiben in <code>sounds\images</code> und lassen sich wiederverwenden.</li>
           <li>Titel: über <b>✎</b> frei überschreibbar. Leer = automatisch (Myinstants-Seitentitel,
@@ -338,6 +365,8 @@ python -m pip install -r requirements.txt</pre>
       <ul class="step" style="display:block;padding-left:18px;margin:0">
         <li>Numpad <b>0–9 , / * - + Num</b>: Sound abspielen, gleiche Taste nochmal: stoppen</li>
         <li>Numpad <b>Enter</b>: alles stoppen</li>
+        <li><b>Bild ↑ / Bild ↓</b>: vorherige / nächste Seite – der Seitenname wird im eigenen Headset angesagt</li>
+        <li>Seiten: über <b>＋</b> neue Seite anlegen (leer oder mit Kommando-Vorlage), über <b>⚙</b> umbenennen, verschieben, löschen</li>
         <li>Neue Versionen: Das Soundboard fragt beim Start und alle 12 Stunden bei GitHub nach und zeigt oben einen Hinweis
           mit Download-Link. Installiert wird nichts automatisch. Abschalten: <code>CHECK_UPDATES = False</code>.</li>
         <li>Lautstärke und „Ordner neu laden“: in der Soundboard-Ansicht. Über 100 % wird verstärkt,
@@ -382,8 +411,19 @@ python -m pip install -r requirements.txt</pre>
     <input type="text" id="label" maxlength="60" autocomplete="off">
     <p class="fieldhint" id="labelHint"></p>
     <label for="url" id="urlLabel">Sound</label>
-    <input type="text" id="url" placeholder="https://www.myinstants.com/de/instant/…" autocomplete="off">
-    <p class="fieldhint">Link einer Myinstants-Seite oder direkter MP3-Link. Ein neuer Sound setzt Titel, Bild und Emoji zurück.</p>
+    <input type="text" id="url" placeholder="Link: https://www.myinstants.com/de/instant/…" autocomplete="off">
+    <div class="srcrow">
+      <button type="button" id="sndFile">Datei …</button>
+      <button type="button" id="recBtn">● Aufnehmen</button>
+      <button type="button" id="recPlay" hidden>▶ Anhören</button>
+      <button type="button" id="recDel" hidden>Verwerfen</button>
+      <span id="recInfo"></span>
+    </div>
+    <input type="file" id="sndInput" accept="audio/*,.mp3,.wav,.ogg,.flac" hidden>
+    <input type="text" id="ttsText" placeholder="Text → Sprache, z. B. „Feind links!“" maxlength="200" autocomplete="off" style="margin-top:8px">
+    <p class="fieldhint" id="srcHint">Quelle: Myinstants- oder MP3-Link, Datei, eigene Aufnahme oder Text → Sprache (Windows-Stimme).
+      Ein neuer Sound setzt Titel, Bild und Emoji zurück.</p>
+    <label class="chk"><input type="checkbox" id="radioChk"> Funk-Effekt <span class="sub">(klingt wie über Funkgerät)</span></label>
 
     <label>Bild oder Emoji <span class="sub">(optional)</span></label>
     <div class="art">
@@ -409,6 +449,32 @@ python -m pip install -r requirements.txt</pre>
     <div class="row">
       <button value="cancel" formnovalidate>Abbrechen</button>
       <button class="primary" id="dlgOk" value="ok">Speichern</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="pdlg">
+  <form method="dialog" id="pdlgForm">
+    <h2 id="pdlgTitle">Neue Seite</h2>
+    <label for="pname">Name</label>
+    <input type="text" id="pname" maxlength="30" autocomplete="off" placeholder="z. B. Kommandos, Memes, Musik">
+    <div id="ptemplate" class="radios">
+      <label><input type="radio" name="ptpl" value="" checked>
+        <span><b>Leer</b><br><span class="sub">16 freie Tasten</span></span></label>
+      <label id="ptplKom"><input type="radio" name="ptpl" value="kommandos">
+        <span><b>Kommandos</b><br><span class="sub">16 typische Ansagen („Feind links!“, „Granate!“ …) per Text-to-Speech
+        mit Funk-Effekt – lassen sich später durch eigene Aufnahmen ersetzen</span></span></label>
+    </div>
+    <div id="pmanage" class="srcrow">
+      <button type="button" id="pLeft">← nach links</button>
+      <button type="button" id="pRight">nach rechts →</button>
+      <button type="button" id="pFill">Freie Tasten mit Kommandos füllen</button>
+      <button type="button" id="pDel" class="danger">Seite löschen</button>
+    </div>
+    <p class="fieldhint" id="pHint"></p>
+    <div class="row">
+      <button value="cancel" formnovalidate>Abbrechen</button>
+      <button class="primary" id="pOk" value="ok">Speichern</button>
     </div>
   </form>
 </dialog>
@@ -455,6 +521,9 @@ function setStatus(text, err = false) {
   statusEl.classList.toggle('err', err);
 }
 
+const withP = (path, pid) => path + (path.includes('?') ? '&' : '?') + 'p=' + encodeURIComponent(pid);
+const jbody = body => ({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
 async function api(path, opts = {}) {
   const r = await fetch(path, { method: 'POST', ...opts });
   const data = await r.json().catch(() => ({}));
@@ -475,9 +544,10 @@ function render() {
     (state.update ? ` · Update ${state.update.version} verfügbar` : '');
   renderBanner();
   renderUpdate();
+  renderPages();
 
-  // Raster nur neu aufbauen, wenn sich die Belegung geändert hat
-  const key = JSON.stringify(state.slots);
+  // Raster nur neu aufbauen, wenn sich Seite oder Belegung geändert hat
+  const key = state.page + JSON.stringify(state.slots);
   if (key === lastKey) {
     grid.querySelectorAll('.tile').forEach(t =>
       t.classList.toggle('playing', state.playing.includes(+t.dataset.n - 1)));
@@ -510,6 +580,11 @@ function render() {
       <button class="edit" title="Sound ändern">✎</button>`;
     tile.querySelector('.num').textContent = key;
     tile.querySelector('.name').textContent = s.name || 'leer';
+    if (s.radio) {
+      const fx = document.createElement('span');
+      fx.className = 'fx'; fx.textContent = '📻'; fx.title = 'Funk-Effekt';
+      tile.querySelector('.num').appendChild(fx);
+    }
     tile.querySelector('.meta').textContent = s.name
       ? `${s.seconds} s` + (s.full_seconds ? ` (gekürzt, ${s.full_seconds} s)` : '') +
         (s.custom ? ' · eigener Titel' : '') : 'Link oder Datei hinzufügen';
@@ -674,13 +749,12 @@ async function fetchImage(url) {
   return await r.blob();
 }
 
-async function applyArt(n, art) {
-  const json = body => ({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+async function applyArt(n, art, pid = state.page) {
   if (art.type === 'url') art = { type: 'blob', blob: await fetchImage(art.url) };
-  if (art.type === 'blob') state = await api(`/api/image/${n}`, { body: await shrinkImage(art.blob) });
-  else if (art.type === 'lib') state = await api('/api/art', json({ slot: n, image: art.name }));
-  else if (art.type === 'emoji') state = await api('/api/art', json({ slot: n, emoji: art.value }));
-  else state = await api('/api/art', json({ slot: n }));
+  if (art.type === 'blob') state = await api(withP(`/api/image/${n}`, pid), { body: await shrinkImage(art.blob) });
+  else if (art.type === 'lib') state = await api(withP('/api/art', pid), jbody({ slot: n, image: art.name }));
+  else if (art.type === 'emoji') state = await api(withP('/api/art', pid), jbody({ slot: n, emoji: art.value }));
+  else state = await api(withP('/api/art', pid), jbody({ slot: n }));
   render();
 }
 
@@ -692,8 +766,68 @@ async function dropArt(n, art) {
   catch (e) { setStatus(e.message, true); }
 }
 
+// ---------- Quellen: Datei, Aufnahme, Text → Sprache ----------
+let editPage = null, editSlot = null, pendingSound = null, recording = false, recDone = false, recTimer = null, recT0 = 0;
+const recBtn = document.getElementById('recBtn'), recInfo = document.getElementById('recInfo');
+const recPlay = document.getElementById('recPlay'), recDel = document.getElementById('recDel');
+const ttsText = document.getElementById('ttsText'), radioChk = document.getElementById('radioChk');
+
+function resetSources() {
+  pendingSound = null; recording = false; recDone = false;
+  clearInterval(recTimer);
+  recBtn.textContent = '● Aufnehmen'; recBtn.classList.remove('rec');
+  recInfo.textContent = ''; recPlay.hidden = recDel.hidden = true;
+  ttsText.value = '';
+  ttsText.hidden = !state.tts;
+  recBtn.disabled = !state.mic;
+  recBtn.title = state.mic ? 'Über dein Mikrofon aufnehmen (max. 30 s)' : 'Mikrofon läuft nicht – siehe Einrichtungs-Check';
+}
+document.getElementById('sndFile').addEventListener('click', () => document.getElementById('sndInput').click());
+document.getElementById('sndInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) { pendingSound = f; recInfo.textContent = 'Datei: ' + f.name; }
+  e.target.value = '';
+});
+async function recStop() {
+  clearInterval(recTimer);
+  recording = false;
+  recBtn.textContent = '● Neu aufnehmen'; recBtn.classList.remove('rec');
+  try {
+    state = await api('/api/record/stop');
+    recDone = true;
+    recInfo.textContent = `Aufnahme ${state.pending_rec} s ✓`;
+    recPlay.hidden = recDel.hidden = false;
+  } catch (e) { recInfo.textContent = e.message; recDone = false; }
+}
+recBtn.addEventListener('click', async () => {
+  if (recording) return recStop();
+  try {
+    state = await api('/api/record/start');
+    recording = true; recDone = false; recT0 = Date.now();
+    recBtn.textContent = '■ Stopp'; recBtn.classList.add('rec');
+    recPlay.hidden = recDel.hidden = true;
+    recTimer = setInterval(() => {
+      const t = (Date.now() - recT0) / 1000;
+      recInfo.textContent = `● Aufnahme läuft … ${t.toFixed(1)} s`;
+      if (t > 30.5) recStop();
+    }, 200);
+  } catch (e) { recInfo.textContent = e.message; }
+});
+recPlay.addEventListener('click', async () => {
+  try { await api('/api/record/preview', jbody({ radio: radioChk.checked })); } catch (e) { recInfo.textContent = e.message; }
+});
+recDel.addEventListener('click', async () => {
+  try { await api('/api/record/discard'); } catch {}
+  recDone = false; recInfo.textContent = ''; recPlay.hidden = recDel.hidden = true;
+  recBtn.textContent = '● Aufnehmen';
+});
+
 function openEdit(n) {
   editing = n;
+  editPage = state.page;
+  editSlot = state.slots[n - 1];
+  resetSources();
+  radioChk.checked = !!editSlot.radio;
   labelDirty = false;
   pendingArt = null;
   emojiIn.value = ''; imgUrlEl.value = '';
@@ -717,29 +851,50 @@ function openEdit(n) {
 
 document.getElementById('dlg').addEventListener('close', async () => {
   const dlg = document.getElementById('dlg');
+  const ok = dlg.returnValue === 'ok' && editing;
+  if (recording) await recStop();
+  if (!ok) {
+    if (recDone) { try { await api('/api/record/discard'); } catch {} }
+    return;
+  }
+  const n = editing, pid = editPage, s = editSlot;
   const url = document.getElementById('url').value.trim();
-  if (dlg.returnValue !== 'ok' || !editing) return;
-  const n = editing;
-  const s = state.slots[n - 1];
+  const text = ttsText.hidden ? '' : ttsText.value.trim();
   const label = labelEl.value.trim();
+  const newLabel = labelDirty ? label : null;      // neuer Sound: nur bewusst eingetragenen Titel übernehmen
+  const radio = radioChk.checked;
   const imgLink = imgUrlEl.value.trim();
   const art = imgLink ? { type: 'url', url: imgLink } : pendingArt;
   let hasSound = !!s.name;
-  if (url) {
-    // neuer Sound: nur einen hier bewusst eingetragenen Titel übernehmen
-    hasSound = await importUrl(n, url, labelDirty ? label : null);
-  } else if (s.name && label !== (s.custom ? s.name : '')) {
-    await setLabel(n, label);
-  }
+  try {
+    if (recDone) {
+      setStatus('speichere Aufnahme …');
+      state = await api(withP('/api/record/save', pid), jbody({ slot: n, label: newLabel, radio }));
+      hasSound = true;
+    } else if (text) {
+      setStatus('erzeuge Sprache …');
+      state = await api(withP('/api/tts', pid), jbody({ slot: n, text, label: newLabel, radio }));
+      hasSound = true;
+    } else if (url) {
+      hasSound = await importUrl(n, url, newLabel, pid, radio);
+    } else if (pendingSound) {
+      hasSound = await upload(n, pendingSound, pid, radio);
+    } else if (s.name) {
+      if (label !== (s.custom ? s.name : '')) await setLabel(n, label, pid);
+      if (radio !== !!s.radio) state = await api(withP('/api/radio', pid), jbody({ slot: n, on: radio }));
+    }
+    render();
+    if (recDone || text) setStatus('gespeichert');
+  } catch (e) { setStatus(e.message, true); return; }
   if (!art) return;
   if (!hasSound) return setStatus('Bild/Emoji braucht einen Sound auf der Taste.', true);
-  try { await applyArt(n, art); setStatus(`Taste ${state.slots[n - 1].key}: gespeichert`); }
+  try { await applyArt(n, art, pid); setStatus('gespeichert'); }
   catch (e) { setStatus(e.message, true); }
 });
 
-async function setLabel(n, label) {
+async function setLabel(n, label, pid = state.page) {
   try {
-    state = await api('/api/label', {
+    state = await api(withP('/api/label', pid), {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slot: n, label })
     });
@@ -749,28 +904,109 @@ async function setLabel(n, label) {
   } catch (e) { setStatus(e.message, true); }
 }
 
-async function importUrl(n, url, label = null) {
+async function importUrl(n, url, label = null, pid = state.page, radio = false) {
   setStatus(`lade Sound für Taste ${state.slots[n - 1].key} …`);
   try {
-    state = await api('/api/import', {
+    state = await api(withP('/api/import', pid), {
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slot: n, url, label })
+      body: JSON.stringify({ slot: n, url, label, radio })
     });
     render(); setStatus(`Taste ${state.slots[n - 1].key}: ${state.slots[n - 1].name}`);
     return true;
   } catch (e) { setStatus(e.message, true); return false; }
 }
 
-async function upload(n, file) {
+async function upload(n, file, pid = state.page, radio = false) {
   setStatus(`lade ${file.name} …`);
   try {
-    state = await api(`/api/upload/${n}`, {
-      headers: { 'X-Filename': encodeURIComponent(file.name) },
+    state = await api(withP(`/api/upload/${n}`, pid), {
+      headers: { 'X-Filename': encodeURIComponent(file.name), 'X-Radio': radio ? '1' : '0' },
       body: file
     });
     render(); setStatus(`Taste ${state.slots[n - 1].key}: ${state.slots[n - 1].name}`);
-  } catch (e) { setStatus(e.message, true); }
+    return true;
+  } catch (e) { setStatus(e.message, true); return false; }
 }
+
+// ---------- Seiten ----------
+let pagesKey = '', editingPage = null, delArmed = false;
+const pagebar = document.getElementById('pagebar');
+function renderPages() {
+  const key = JSON.stringify([state.page, state.pages]);
+  if (key === pagesKey) return;
+  pagesKey = key;
+  pagebar.innerHTML = '';
+  for (const p of state.pages) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'ptab' + (p.id === state.page ? ' active' : '') + (p.busy ? ' busy' : '');
+    b.innerHTML = '<span class="pn"></span><span class="cnt"></span>';
+    b.querySelector('.pn').textContent = p.name;
+    b.querySelector('.cnt').textContent = p.count;
+    b.title = p.busy ? 'Kommandos werden erzeugt …' : `${p.count} Sound(s)`;
+    b.addEventListener('click', () => switchPage(p.id));
+    pagebar.appendChild(b);
+  }
+  const add = document.createElement('button');
+  add.type = 'button'; add.className = 'pbtn'; add.textContent = '＋'; add.title = 'Neue Seite';
+  add.addEventListener('click', () => openPage(null));
+  const ed = document.createElement('button');
+  ed.type = 'button'; ed.className = 'pbtn'; ed.textContent = '⚙'; ed.title = 'Aktuelle Seite bearbeiten';
+  ed.addEventListener('click', () => openPage(state.page));
+  const hint = document.createElement('span');
+  hint.className = 'pagehint'; hint.textContent = 'Bild ↑ / Bild ↓ wechselt die Seite';
+  pagebar.append(add, ed, hint);
+}
+async function switchPage(id) {
+  try { state = await api('/api/page/switch', jbody({ id })); render(); } catch (e) { setStatus(e.message, true); }
+}
+function openPage(id) {
+  editingPage = id;
+  delArmed = false;
+  const pDel = document.getElementById('pDel');
+  pDel.textContent = 'Seite löschen'; pDel.classList.remove('armed');
+  const p = id && state.pages.find(x => x.id === id);
+  document.getElementById('pdlgTitle').textContent = p ? `Seite „${p.name}“` : 'Neue Seite';
+  document.getElementById('pname').value = p ? p.name : '';
+  document.getElementById('ptemplate').hidden = !!p;
+  document.getElementById('pmanage').hidden = !p;
+  document.getElementById('ptplKom').hidden = !state.tts;
+  document.querySelector('input[name="ptpl"][value=""]').checked = true;
+  document.getElementById('pFill').hidden = !state.tts;
+  document.getElementById('pHint').textContent = p
+    ? 'Gelöschte Seiten werden nicht endgültig entfernt, sondern nach sounds\\_geloeschte_Seiten verschoben.'
+    : (state.tts ? '' : 'Die Vorlage „Kommandos“ (Text-to-Speech) gibt es nur unter Windows.');
+  document.getElementById('pdlg').showModal();
+  document.getElementById('pname').focus();
+}
+async function pageAction(path, body, msg) {
+  try { state = await api(path, jbody(body)); render(); if (msg) setStatus(msg); }
+  catch (e) { setStatus(e.message, true); }
+}
+document.getElementById('pLeft').addEventListener('click', () => pageAction('/api/page/move', { id: editingPage, delta: -1 }));
+document.getElementById('pRight').addEventListener('click', () => pageAction('/api/page/move', { id: editingPage, delta: 1 }));
+document.getElementById('pFill').addEventListener('click', async () => {
+  await pageAction('/api/page/fill', { id: editingPage }, 'Kommandos werden erzeugt …');
+  document.getElementById('pdlg').close();
+});
+document.getElementById('pDel').addEventListener('click', async () => {
+  const b = document.getElementById('pDel');
+  if (!delArmed) { delArmed = true; b.textContent = 'Wirklich löschen?'; b.classList.add('armed'); return; }
+  await pageAction('/api/page/delete', { id: editingPage }, 'Seite gelöscht');
+  document.getElementById('pdlg').close();
+});
+document.getElementById('pdlg').addEventListener('close', async () => {
+  if (document.getElementById('pdlg').returnValue !== 'ok') return;
+  const name = document.getElementById('pname').value.trim();
+  if (!editingPage) {
+    const template = document.querySelector('input[name="ptpl"]:checked').value || null;
+    await pageAction('/api/page/add', { name, template },
+      template ? 'Seite angelegt – Kommandos werden erzeugt …' : 'Seite angelegt');
+  } else {
+    const p = state.pages.find(x => x.id === editingPage);
+    if (p && name !== p.name) await pageAction('/api/page/rename', { id: editingPage, name }, 'Seite umbenannt');
+  }
+});
 
 vol.addEventListener('input', () => {
   volBusy = true; volText.textContent = vol.value + ' %';

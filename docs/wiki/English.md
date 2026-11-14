@@ -22,8 +22,11 @@
 | Numpad 0–9, `,` `/` `*` `-` `+`, NumLock | play sound (16 slots) |
 | same key again | stop that sound |
 | Numpad Enter | stop all |
+| Page Up / Page Down | previous / next page (page name announced in your headset) |
 
 - Add sounds: click a tile → paste a [Myinstants](https://www.myinstants.com) page link into **Sound** → **Speichern** (save). Or drag an audio file onto a tile.
+- **Pages:** tabs above the tiles; **＋** adds a page (empty or with the *Kommandos* template: 16 German callouts via Windows text-to-speech with radio effect), **⚙** renames/moves/deletes it.
+- **Sources** in the tile dialog: link, **Datei …** (file), **● Aufnehmen** (record via your mic), **Text → Sprache** (text-to-speech). **Funk-Effekt** = radio effect.
 - **Titel** = custom title (leave empty for automatic).
 - **Bild oder Emoji** = image or emoji as tile background: file, Ctrl+V, image link, library or emoji picker – or drop an image onto a tile. It is tied to the sound and reset when the sound is replaced; images stay in the library (`sounds\images`).
 - Push-to-talk: while a sound plays, the soundboard holds **K** – only when WARDOGS is the active window. Change with `PTT_KEY` in `soundboard.py`, or `PTT_KEY = None` to disable.

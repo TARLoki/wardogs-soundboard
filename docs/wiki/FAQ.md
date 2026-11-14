@@ -22,8 +22,11 @@ Nur ein Treiber kann Windows ein zusätzliches Mikrofon bereitstellen. Ein eigen
 ### Sind Sounds dabei?
 Nein. Viele Meme-Clips stammen aus Filmen, Serien oder Musik. Für den privaten Spaß im Voice-Chat okay – zum Weiterverbreiten oder Streamen nicht ohne Weiteres.
 
+### Braucht Text-to-Speech Internet?
+Nein. Verwendet wird die in Windows eingebaute Sprachausgabe – die Texte verlassen deinen PC nicht.
+
 ### Wie aktualisiere ich auf eine neue Version?
-Erscheint oben in der Oberfläche der Hinweis „Neue Version verfügbar“: ZIP herunterladen (vorher „Zulassen“, siehe [Installation](Installation)) und die Programmdateien in deinen Soundboard-Ordner kopieren. **Den Ordner `sounds` nicht überschreiben** – dort liegen deine Sounds, Titel, Bilder und Emojis. Hast du in `soundboard.py` Einstellungen geändert (z. B. `MIC_DEVICE`), trage sie danach erneut ein.
+Erscheint oben in der Oberfläche der Hinweis „Neue Version verfügbar“: ZIP herunterladen (vorher „Zulassen“, siehe [Installation](Installation)) und die Programmdateien in deinen Soundboard-Ordner kopieren. **Den Ordner `sounds` nicht überschreiben** – dort liegen deine Seiten, Sounds, Titel, Bilder und Emojis. Hast du in `soundboard.py` Einstellungen geändert (z. B. `MIC_DEVICE`), trage sie danach erneut ein.
 
 ### Gibt es das auf Englisch?
 Die Oberfläche ist derzeit deutsch. Eine Kurzanleitung auf Englisch gibt es unter [English](English).
