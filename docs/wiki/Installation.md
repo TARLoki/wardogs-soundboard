@@ -4,7 +4,7 @@ Einmalig, etwa 15 Minuten. Du brauchst Windows 10/11, WARDOGS über Steam, ein H
 
 ## 1. Herunterladen und entpacken
 
-1. Die Datei `WARDOGS-Soundboard-v1.9.zip` unter **[Releases](https://github.com/TARLoki/wardogs-soundboard/releases/latest)** → „Assets“ herunterladen.
+1. Unter **[Releases](https://github.com/TARLoki/wardogs-soundboard/releases/latest)** → „Assets“ die ZIP-Datei der neuesten Version herunterladen (z. B. `WARDOGS-Soundboard-v2.0.zip`).
 2. **Vor dem Entpacken:** Rechtsklick auf die ZIP → **Eigenschaften** → unten **„Zulassen“** anhaken → **OK**.
    Sonst blockiert die *Intelligente App-Steuerung* (Smart App Control) später die `start.bat`.
 3. Rechtsklick → **Alle extrahieren …** in einen eigenen Ordner, z. B. `C:\Spiele\WARDOGS-Soundboard`.

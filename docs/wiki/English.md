@@ -6,7 +6,7 @@
 
 ## Setup
 
-1. Download `WARDOGS-Soundboard-v1.9.zip` from **[Releases](https://github.com/TARLoki/wardogs-soundboard/releases/latest)**. Right-click → Properties → **Unblock** → extract to e.g. `C:\Games\WARDOGS-Soundboard` (**not** `C:\Program Files`).
+1. Download the latest `WARDOGS-Soundboard-v….zip` from **[Releases](https://github.com/TARLoki/wardogs-soundboard/releases/latest)**. Right-click → Properties → **Unblock** → extract to e.g. `C:\Games\WARDOGS-Soundboard` (**not** `C:\Program Files`).
 2. Install **[Python 3.14](https://www.python.org/downloads/)** – tick **"Add python.exe to PATH"**.
 3. In PowerShell inside that folder: `python -m pip install -r requirements.txt`
 4. Install **[VB-Cable](https://vb-audio.com/Cable/)** (run setup as administrator) and **reboot**.
@@ -25,6 +25,7 @@
 
 - Add sounds: click a tile → paste a [Myinstants](https://www.myinstants.com) page link into **Sound** → **Speichern** (save). Or drag an audio file onto a tile.
 - **Titel** = custom title (leave empty for automatic).
+- **Bild oder Emoji** = image or emoji as tile background: file, Ctrl+V, image link, library or emoji picker – or drop an image onto a tile. It is tied to the sound and reset when the sound is replaced; images stay in the library (`sounds\images`).
 - Push-to-talk: while a sound plays, the soundboard holds **K** – only when WARDOGS is the active window. Change with `PTT_KEY` in `soundboard.py`, or `PTT_KEY = None` to disable.
 - Keep the console window open while playing – your voice runs through the soundboard.
 

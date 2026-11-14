@@ -35,6 +35,11 @@ Platzbelegung:
   Dateien ohne Präfix füllen freie Plätze alphabetisch.
   Ersetzte Sounds werden nicht gelöscht, sondern nach sounds/_alt verschoben.
 
+Bilder und Emojis:
+  Jede Taste kann ein Bild (als Kachelhintergrund) oder ein Emoji bekommen. Es hängt am
+  Sound und wird beim Austausch zurückgesetzt. Alle Bilder bleiben in sounds/images und
+  lassen sich im Dialog aus der Bibliothek wiederverwenden.
+
 Titel:
   Automatisch aus Myinstants-Seitentitel, Datei-Metadaten oder Dateinamen.
   Eigene Titel stehen in sounds/labels.json und verfallen, wenn die Datei getauscht wird.
@@ -51,6 +56,7 @@ Desktopverknüpfung:
 """
 
 import collections
+import hashlib
 import html as htmllib
 import json
 import re
@@ -69,7 +75,7 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 
-VERSION = "1.9"
+VERSION = "2.0"
 
 # ============================ Konfiguration ============================
 
@@ -77,6 +83,9 @@ BASE_DIR = Path(__file__).parent
 SOUND_DIR = BASE_DIR / "sounds"
 OLD_DIR = SOUND_DIR / "_alt"
 LABELS_FILE = SOUND_DIR / "labels.json"
+ART_FILE = SOUND_DIR / "art.json"          # Bild/Emoji je Sound
+IMG_DIR = SOUND_DIR / "images"             # Bildbibliothek (bleibt erhalten)
+MAX_IMAGE_BYTES = 3 * 1024 * 1024
 EXTENSIONS = {".wav", ".ogg", ".flac", ".mp3"}
 
 CABLE_DEVICE = "CABLE Input"   # Namensteil des VB-Cable-Wiedergabegeräts
@@ -514,6 +523,52 @@ def check_static(setup: Setup, board):
 
 
 # ----------------------------------------------------------------------
+# Bilder
+# ----------------------------------------------------------------------
+
+IMAGE_TYPES = {"png": "image/png", "jpg": "image/jpeg", "gif": "image/gif", "webp": "image/webp"}
+IMAGE_NAME = re.compile(r"^[0-9a-f]{16}\.(png|jpg|gif|webp)$")
+
+
+def image_type(data: bytes):
+    """Bildformat anhand der Dateisignatur erkennen (nicht anhand des Namens)."""
+    if data.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "png"
+    if data.startswith(b"\xff\xd8\xff"):
+        return "jpg"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "gif"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp"
+    return None
+
+
+def read_json(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def write_json(path: Path, data: dict):
+    try:
+        path.parent.mkdir(exist_ok=True)
+        tmp = path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+        tmp.replace(path)
+    except Exception as e:
+        print(f"  ! {path.name} konnte nicht gespeichert werden: {e}")
+
+
+def clean_emoji(text: str):
+    text = (text or "").strip()
+    if not text or len(text) > 16 or any(c in text for c in "<>&\"'"):
+        return None
+    return text
+
+
+# ----------------------------------------------------------------------
 # Soundboard-Logik (von Hotkeys und Weboberfläche gemeinsam genutzt)
 # ----------------------------------------------------------------------
 
@@ -529,6 +584,52 @@ class Board:
         self.audio_ready = False
         self.setup = Setup()
         self.labels = self._load_labels()
+        self.art = read_json(ART_FILE)
+
+    # ---- Bilder und Emojis ----
+    def add_image(self, data: bytes) -> str:
+        """Bild in die Bibliothek aufnehmen (gleiche Bilder werden nur einmal gespeichert)."""
+        if len(data) > MAX_IMAGE_BYTES:
+            raise ValueError("Bild ist zu groß (max. 3 MB)")
+        kind = image_type(data)
+        if not kind:
+            raise ValueError("Keine Bilddatei (PNG, JPG, GIF oder WebP)")
+        name = f"{hashlib.sha256(data).hexdigest()[:16]}.{kind}"
+        IMG_DIR.mkdir(parents=True, exist_ok=True)
+        path = IMG_DIR / name
+        if not path.exists():
+            path.write_bytes(data)
+        return name
+
+    def list_images(self):
+        if not IMG_DIR.exists():
+            return []
+        files = [p for p in IMG_DIR.iterdir() if IMAGE_NAME.match(p.name)]
+        return [p.name for p in sorted(files, key=lambda p: p.stat().st_mtime, reverse=True)]
+
+    def set_art(self, idx, image=None, emoji=None):
+        """Bild (Name aus der Bibliothek) oder Emoji setzen; beides leer = entfernen."""
+        s = self.slots[idx] if 0 <= idx < NSLOTS else None
+        if not s:
+            raise ValueError("Auf dieser Taste liegt kein Sound")
+        if image:
+            if not IMAGE_NAME.match(image) or not (IMG_DIR / image).exists():
+                raise ValueError("Bild nicht in der Bibliothek gefunden")
+            (IMG_DIR / image).touch()                       # zuletzt benutzt -> vorne
+            entry = {"image": image}
+        elif emoji:
+            e = clean_emoji(emoji)
+            if not e:
+                raise ValueError("Ungültiges Emoji")
+            entry = {"emoji": e}
+        else:
+            entry = None
+        with self.file_lock:
+            if entry:
+                self.art[s[1].name] = entry
+            else:
+                self.art.pop(s[1].name, None)
+            write_json(ART_FILE, self.art)
 
     # ---- eigene Titel ----
     def _load_labels(self):
@@ -603,6 +704,13 @@ class Board:
                 for k in stale:
                     del self.labels[k]
                 self._save_labels()
+            stale_art = [k for k, v in self.art.items()
+                         if k not in present or not isinstance(v, dict)
+                         or ("image" in v and not (IMG_DIR / str(v["image"])).exists())]
+            if stale_art:                   # Bild/Emoji gehört zu keinem Sound mehr
+                for k in stale_art:
+                    del self.art[k]
+                write_json(ART_FILE, self.art)
         check_static(self.setup, self)
 
         if not quiet:
@@ -710,11 +818,20 @@ class Board:
             if current:
                 self.labels.pop(current[1].name, None)
             self.labels.pop(target.name, None)
+            if current:                       # neuer Sound -> Bild/Emoji zurücksetzen
+                self.art.pop(current[1].name, None)
+            self.art.pop(target.name, None)
+            write_json(ART_FILE, self.art)
             if label and label.strip():
                 self.labels[target.name] = label.strip()[:60]
             self._save_labels()
         self.reload(quiet=True)
         print(f"Platz {SLOTS[idx][0]}: {display_name(target)}")
+
+    def _art_state(self, s):
+        a = self.art.get(s[1].name, {}) if s else {}
+        img = a.get("image")
+        return {"image": f"/images/{img}" if img else None, "emoji": a.get("emoji")}
 
     def state(self):
         return {
@@ -732,7 +849,8 @@ class Board:
                  "custom": s[4] if s else False,
                  "file": s[1].name if s else None,
                  "seconds": round(len(s[2]) / SAMPLE_RATE, 1) if s else None,
-                 "full_seconds": s[5] if s else None}
+                 "full_seconds": s[5] if s else None,
+                 **self._art_state(s)}
                 for i, s in enumerate(self.slots)
             ],
         }
@@ -838,6 +956,20 @@ def make_handler(board: Board, engine=None):
                 self.send(200, board.state())
             elif self.path == "/api/setup":
                 self.send(200, setup_info(board))
+            elif self.path == "/api/images":
+                self.send(200, {"images": board.list_images()})
+            elif self.path.startswith("/images/"):
+                name = self.path[len("/images/"):].split("?", 1)[0]
+                path = IMG_DIR / name
+                if not IMAGE_NAME.match(name) or not path.exists():
+                    return self.send(404, {"error": "nicht gefunden"})
+                data = path.read_bytes()
+                self.send_response(200)
+                self.send_header("Content-Type", IMAGE_TYPES[name.rsplit(".", 1)[1]])
+                self.send_header("Content-Length", str(len(data)))
+                self.send_header("Cache-Control", "max-age=31536000, immutable")
+                self.end_headers()
+                self.wfile.write(data)
             else:
                 self.send(404, {"error": "nicht gefunden"})
 
@@ -889,6 +1021,27 @@ def make_handler(board: Board, engine=None):
                     req = json.loads(self.body())
                     board.set_label(int(req["slot"]) - 1, req.get("label", ""))
                     return self.send(200, board.state())
+                if parts[:2] == ["api", "image"] and len(parts) == 3:
+                    idx = int(parts[2]) - 1
+                    if not 0 <= idx < NSLOTS:
+                        raise ValueError("Ungültiger Platz")
+                    name = board.add_image(self.body())
+                    board.set_art(idx, image=name)
+                    return self.send(200, board.state())
+                if parts == ["api", "art"]:
+                    req = json.loads(self.body())
+                    board.set_art(int(req["slot"]) - 1, image=req.get("image"), emoji=req.get("emoji"))
+                    return self.send(200, board.state())
+                if parts == ["api", "fetchimage"]:
+                    # Bild von einem Link holen; verkleinert wird danach im Browser
+                    url = json.loads(self.body())["url"].strip()
+                    if not re.match(r"^https?://", url):
+                        url = "https://" + url
+                    data, _ = fetch(url, limit=8 * 1024 * 1024)
+                    kind = image_type(data)
+                    if not kind:
+                        raise ValueError("Der Link zeigt nicht direkt auf ein Bild (PNG, JPG, GIF, WebP)")
+                    return self.send(200, data, IMAGE_TYPES[kind])
                 if parts[:2] == ["api", "upload"] and len(parts) == 3:
                     idx = int(parts[2]) - 1
                     if not 0 <= idx < NSLOTS:

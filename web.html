@@ -50,11 +50,44 @@
   .tile.stopkey .num { color: var(--danger); font-size: 22px; }
   .num { font-size: 26px; font-weight: 700; color: var(--accent); line-height: 1; }
   .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
-    -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word; }
+    -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; hyphens: auto; }
   .meta { font-size: 12px; color: var(--muted); }
   .edit { position: absolute; top: 8px; right: 8px; padding: 2px 8px; font-size: 13px; color: var(--muted);
     background: transparent; border-color: transparent; }
   .edit:hover { border-color: var(--line); color: var(--text); }
+  .edit { z-index: 2; }
+
+  /* Bild als Kachelhintergrund, Emoji groß rechts */
+  .tile.has-img { background-size: cover; background-position: center; border-color: #474e5a; }
+  .tile.has-img:hover { filter: brightness(1.12); background-color: var(--tile); }
+  .tile.has-img .num, .tile.has-img .name, .tile.has-img .meta { text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 8px rgba(0,0,0,.6); }
+  .tile.has-img .meta { color: #d5d8de; }
+  .tile.has-img .edit { color: #e6e6e6; text-shadow: 0 1px 3px #000; }
+  .tile > div { position: relative; z-index: 1; }
+  .tile { isolation: isolate; }
+  .emoji { position: absolute; inset: 0; display: grid; place-items: center; font-size: 64px; line-height: 1;
+    opacity: .28; pointer-events: none; z-index: 0; overflow: hidden; }
+  .tile.has-emoji .num, .tile.has-emoji .name, .tile.has-emoji .meta { text-shadow: 0 1px 3px rgba(0,0,0,.95), 0 0 8px rgba(0,0,0,.7); }
+
+  /* Bild/Emoji im Dialog */
+  dialog { max-height: 92vh; overflow-y: auto; }
+  .art { display: flex; gap: 12px; align-items: center; }
+  .artprev { width: 92px; height: 68px; flex: none; border-radius: 8px; border: 1px dashed var(--line);
+    background: var(--bg) center / cover no-repeat; display: grid; place-items: center; font-size: 34px; color: var(--muted); }
+  .artprev.set { border-style: solid; }
+  .artbtns { display: flex; flex-wrap: wrap; gap: 6px; }
+  .artbtns button { padding: 5px 10px; font-size: 13px; }
+  .lib { display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 6px; margin-top: 8px;
+    max-height: 168px; overflow-y: auto; }
+  .lib img { width: 100%; aspect-ratio: 1.35; object-fit: cover; border-radius: 6px; cursor: pointer; border: 1px solid var(--line); }
+  .lib .none { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+  .emojis { display: flex; flex-wrap: wrap; gap: 2px; margin-top: 10px; }
+  .emojis button { padding: 2px 5px; font-size: 21px; line-height: 1.2; background: transparent; border-color: transparent; }
+  .emojis button:hover { border-color: var(--line); }
+  .sel { outline: 2px solid var(--accent); outline-offset: 1px; }
+  dialog .two { display: flex; gap: 8px; margin-top: 8px; }
+  dialog .two input { flex: 1; min-width: 0; }
+  #emojiIn { flex: 0 0 9.5em !important; }
 
   dialog { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 12px;
     padding: 18px; width: min(480px, calc(100vw - 32px)); }
@@ -128,6 +161,9 @@
     .name { font-size: 12px; -webkit-line-clamp: 3; }
     .meta { display: none; }
     .edit { top: 4px; right: 4px; padding: 0 6px; }
+    .emoji { font-size: 44px; }
+    dialog .two { flex-direction: column; }
+    #emojiIn { flex: 1 1 auto !important; }
   }
 </style>
 </head>
@@ -162,8 +198,8 @@
   <div class="grid" id="grid"></div>
 
   <p class="hint">
-    Klick spielt ab, nochmal klicken stoppt. Über <b>✎</b> einen Myinstants-Link auf den Platz legen
-    oder eine Datei direkt auf eine Kachel ziehen. Ersetzte Sounds landen in <b>sounds/_alt</b>.
+    Klick spielt ab, nochmal klicken stoppt. Über <b>✎</b> Sound, Titel, Bild oder Emoji festlegen –
+    Sound- und Bilddateien lassen sich auch direkt auf eine Kachel ziehen. Ersetzte Sounds landen in <b>sounds/_alt</b>.
   </p>
   </section>
 
@@ -255,6 +291,8 @@ python -m pip install -r requirements.txt</pre>
           <li>Oder Dateien in den Ordner <code>sounds</code> legen – Präfix bestimmt die Taste:
             <code>1_</code>…<code>9_</code>, <code>0_</code>, <code>komma_</code>, <code>geteilt_</code>, <code>mal_</code>,
             <code>minus_</code>, <code>plus_</code>, <code>num_</code>.</li>
+          <li>Bild oder Emoji: über <b>✎</b> (Datei, Strg+V, Bild-Link, Bibliothek) oder Bild direkt auf die Kachel ziehen.
+            Es hängt am Sound; alle Bilder bleiben in <code>sounds\images</code> und lassen sich wiederverwenden.</li>
           <li>Titel: über <b>✎</b> frei überschreibbar. Leer = automatisch (Myinstants-Seitentitel,
             Datei-Metadaten oder Dateiname). Wird der Sound getauscht, gilt wieder der automatische Titel.</li>
         </ul>
@@ -331,7 +369,29 @@ python -m pip install -r requirements.txt</pre>
     <p class="fieldhint" id="labelHint"></p>
     <label for="url" id="urlLabel">Sound</label>
     <input type="text" id="url" placeholder="https://www.myinstants.com/de/instant/…" autocomplete="off">
-    <p class="fieldhint">Link einer Myinstants-Seite oder direkter MP3-Link. Ein neuer Sound setzt einen alten eigenen Titel zurück.</p>
+    <p class="fieldhint">Link einer Myinstants-Seite oder direkter MP3-Link. Ein neuer Sound setzt Titel, Bild und Emoji zurück.</p>
+
+    <label>Bild oder Emoji <span class="sub">(optional)</span></label>
+    <div class="art">
+      <div class="artprev" id="artPrev"></div>
+      <div>
+        <div class="artbtns">
+          <button type="button" id="artFile">Datei …</button>
+          <button type="button" id="artLibBtn">Bibliothek</button>
+          <button type="button" id="artClear">Entfernen</button>
+        </div>
+        <p class="fieldhint">Oder ein Bild mit <b>Strg+V</b> einfügen bzw. direkt auf die Kachel ziehen.</p>
+      </div>
+    </div>
+    <input type="file" id="artInput" accept="image/*" hidden>
+    <div class="lib" id="lib" hidden></div>
+    <div class="emojis" id="emojis"></div>
+    <div class="two">
+      <input type="text" id="imgUrl" placeholder="Bild-Link, z. B. https://…/bild.png" autocomplete="off">
+      <input type="text" id="emojiIn" placeholder="eigenes Emoji" maxlength="16" autocomplete="off">
+    </div>
+    <p class="fieldhint" id="artHint">Bild und Emoji hängen am Sound. Alle Bilder bleiben in der Bibliothek und lassen sich wiederverwenden.</p>
+
     <div class="row">
       <button value="cancel" formnovalidate>Abbrechen</button>
       <button class="primary" id="dlgOk" value="ok">Speichern</button>
@@ -438,6 +498,17 @@ function render() {
       ? `${s.seconds} s` + (s.full_seconds ? ` (gekürzt, ${s.full_seconds} s)` : '') +
         (s.custom ? ' · eigener Titel' : '') : 'Link oder Datei hinzufügen';
     tile.title = s.file ? s.file + (s.custom ? `\nAutomatisch: ${s.auto_name}` : '') : '';
+    if (s.image) {
+      tile.classList.add('has-img');
+      tile.style.backgroundImage =
+        `linear-gradient(rgba(10,12,16,.30), rgba(10,12,16,.80)), url("${s.image}")`;
+    } else if (s.emoji) {
+      const em = document.createElement('span');
+      em.className = 'emoji';
+      em.textContent = s.emoji;
+      tile.classList.add('has-emoji');
+      tile.appendChild(em);
+    }
 
     tile.addEventListener('click', e => {
       if (e.target.closest('.edit')) return openEdit(n);
@@ -449,9 +520,15 @@ function render() {
     tile.addEventListener('drop', e => {
       e.preventDefault(); tile.classList.remove('drop');
       const file = e.dataTransfer.files[0];
-      const url = e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain');
-      if (file) upload(n, file);
-      else if (url) importUrl(n, url.trim());
+      if (file && file.type.startsWith('image/')) return dropArt(n, { type: 'blob', blob: file });
+      if (file) return upload(n, file);
+      // aus einem anderen Browserfenster gezogenes Bild?
+      const html = e.dataTransfer.getData('text/html');
+      const img = html && new DOMParser().parseFromString(html, 'text/html').querySelector('img[src]');
+      const url = (e.dataTransfer.getData('text/uri-list') || e.dataTransfer.getData('text/plain') || '').trim();
+      if (img) return dropArt(n, { type: 'url', url: img.src });
+      if (IMG_URL.test(url)) return dropArt(n, { type: 'url', url });
+      if (url) importUrl(n, url);
     });
     grid.appendChild(tile);
   }
@@ -477,9 +554,134 @@ let labelDirty = false;
 const labelEl = document.getElementById('label');
 labelEl.addEventListener('input', () => { labelDirty = true; });
 
+// ---------- Bild / Emoji ----------
+const IMG_URL = /^https?:\/\/\S+\.(png|jpe?g|gif|webp)(\?\S*)?$/i;
+const EMOJIS = ['💥','🔫','💣','🧱','🐀','🤡','💀','🔥','😂','📢','🎺','🚑','🐔','🍺','⚠️','🎉','👋','🫡'];
+const artPrev = document.getElementById('artPrev');
+const libEl = document.getElementById('lib');
+const emojiIn = document.getElementById('emojiIn');
+const imgUrlEl = document.getElementById('imgUrl');
+let pendingArt = null;      // null | {type:'blob',blob} | {type:'lib',name} | {type:'emoji',value} | {type:'clear'}
+let previewUrl = null;
+
+function setPreview(kind, value) {
+  if (previewUrl) { URL.revokeObjectURL(previewUrl); previewUrl = null; }
+  artPrev.style.backgroundImage = '';
+  artPrev.textContent = '';
+  artPrev.classList.toggle('set', kind !== 'none');
+  if (kind === 'img') artPrev.style.backgroundImage = `url("${value}")`;
+  else if (kind === 'blob') { previewUrl = URL.createObjectURL(value); artPrev.style.backgroundImage = `url("${previewUrl}")`; }
+  else if (kind === 'emoji') artPrev.textContent = value;
+  else artPrev.textContent = '🖼';
+  document.querySelectorAll('#emojis button').forEach(b =>
+    b.classList.toggle('sel', kind === 'emoji' && b.textContent === value));
+}
+
+function choose(art) {
+  pendingArt = art;
+  if (art.type === 'blob') setPreview('blob', art.blob);
+  else if (art.type === 'lib') setPreview('img', '/images/' + art.name);
+  else if (art.type === 'emoji') setPreview('emoji', art.value);
+  else setPreview('none');
+  if (art.type !== 'emoji') emojiIn.value = '';
+  imgUrlEl.value = '';
+  libEl.querySelectorAll('img').forEach(i => i.classList.toggle('sel', art.type === 'lib' && i.dataset.name === art.name));
+}
+
+document.getElementById('emojis').append(...EMOJIS.map(em => {
+  const b = document.createElement('button');
+  b.type = 'button'; b.textContent = em;
+  b.addEventListener('click', () => choose({ type: 'emoji', value: em }));
+  return b;
+}));
+emojiIn.addEventListener('input', () => {
+  const v = emojiIn.value.trim();
+  if (v) choose({ type: 'emoji', value: v }); else { pendingArt = null; setPreview('none'); }
+});
+imgUrlEl.addEventListener('input', () => { if (imgUrlEl.value.trim()) { pendingArt = null; setPreview('none'); } });
+document.getElementById('artFile').addEventListener('click', () => document.getElementById('artInput').click());
+document.getElementById('artInput').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (f) choose({ type: 'blob', blob: f });
+  e.target.value = '';
+});
+document.getElementById('artClear').addEventListener('click', () => choose({ type: 'clear' }));
+document.getElementById('artLibBtn').addEventListener('click', async () => {
+  if (!libEl.hidden) { libEl.hidden = true; return; }
+  libEl.hidden = false;
+  libEl.innerHTML = '<div class="none">lade …</div>';
+  try {
+    const { images } = await (await fetch('/api/images', { cache: 'no-store' })).json();
+    libEl.innerHTML = images.length ? '' : '<div class="none">Noch keine Bilder in der Bibliothek.</div>';
+    for (const name of images) {
+      const im = document.createElement('img');
+      im.src = '/images/' + name; im.dataset.name = name; im.alt = '';
+      im.addEventListener('click', () => choose({ type: 'lib', name }));
+      libEl.appendChild(im);
+    }
+  } catch { libEl.innerHTML = '<div class="none">Bibliothek nicht erreichbar.</div>'; }
+});
+// Strg+V im Dialog: Bild aus der Zwischenablage
+document.getElementById('dlg').addEventListener('paste', e => {
+  const item = [...(e.clipboardData?.items || [])].find(i => i.type.startsWith('image/'));
+  if (!item) return;
+  e.preventDefault();
+  choose({ type: 'blob', blob: item.getAsFile() });
+});
+
+// Bild im Browser verkleinern (max. 360 px), damit die Bibliothek klein bleibt
+async function shrinkImage(blob) {
+  const url = URL.createObjectURL(blob);
+  try {
+    const img = await new Promise((res, rej) => {
+      const i = new Image();
+      i.onload = () => res(i);
+      i.onerror = () => rej(new Error('Bild konnte nicht gelesen werden'));
+      i.src = url;
+    });
+    const sc = Math.min(1, 360 / Math.max(img.naturalWidth, img.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(img.naturalWidth * sc));
+    c.height = Math.max(1, Math.round(img.naturalHeight * sc));
+    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+    let out = await new Promise(r => c.toBlob(r, 'image/webp', 0.85));
+    if (!out || out.type !== 'image/webp') out = await new Promise(r => c.toBlob(r, 'image/jpeg', 0.85));
+    return out;
+  } finally { URL.revokeObjectURL(url); }
+}
+
+async function fetchImage(url) {
+  const r = await fetch('/api/fetchimage', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url })
+  });
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || 'Bild konnte nicht geladen werden');
+  return await r.blob();
+}
+
+async function applyArt(n, art) {
+  const json = body => ({ headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  if (art.type === 'url') art = { type: 'blob', blob: await fetchImage(art.url) };
+  if (art.type === 'blob') state = await api(`/api/image/${n}`, { body: await shrinkImage(art.blob) });
+  else if (art.type === 'lib') state = await api('/api/art', json({ slot: n, image: art.name }));
+  else if (art.type === 'emoji') state = await api('/api/art', json({ slot: n, emoji: art.value }));
+  else state = await api('/api/art', json({ slot: n }));
+  render();
+}
+
+async function dropArt(n, art) {
+  const s = state.slots[n - 1];
+  if (!s.name) return setStatus('Erst einen Sound auf die Taste legen, dann ein Bild.', true);
+  setStatus(`Bild für Taste ${s.key} …`);
+  try { await applyArt(n, art); setStatus(`Taste ${s.key}: Bild gesetzt`); }
+  catch (e) { setStatus(e.message, true); }
+}
+
 function openEdit(n) {
   editing = n;
   labelDirty = false;
+  pendingArt = null;
+  emojiIn.value = ''; imgUrlEl.value = '';
+  libEl.hidden = true;
   const s = state.slots[n - 1];
   document.getElementById('dlgTitle').textContent = `Taste ${s.key}`;
   labelEl.value = s.custom ? s.name : '';
@@ -490,22 +692,33 @@ function openEdit(n) {
   document.getElementById('urlLabel').innerHTML = s.name
     ? 'Sound ersetzen <span class="sub">(optional)</span>' : 'Sound';
   document.getElementById('url').value = '';
+  if (s.image) setPreview('img', s.image);
+  else if (s.emoji) setPreview('emoji', s.emoji);
+  else setPreview('none');
   document.getElementById('dlg').showModal();
   (s.name ? labelEl : document.getElementById('url')).focus();
 }
 
-document.getElementById('dlg').addEventListener('close', () => {
+document.getElementById('dlg').addEventListener('close', async () => {
   const dlg = document.getElementById('dlg');
   const url = document.getElementById('url').value.trim();
   if (dlg.returnValue !== 'ok' || !editing) return;
-  const s = state.slots[editing - 1];
+  const n = editing;
+  const s = state.slots[n - 1];
   const label = labelEl.value.trim();
+  const imgLink = imgUrlEl.value.trim();
+  const art = imgLink ? { type: 'url', url: imgLink } : pendingArt;
+  let hasSound = !!s.name;
   if (url) {
     // neuer Sound: nur einen hier bewusst eingetragenen Titel übernehmen
-    importUrl(editing, url, labelDirty ? label : null);
+    hasSound = await importUrl(n, url, labelDirty ? label : null);
   } else if (s.name && label !== (s.custom ? s.name : '')) {
-    setLabel(editing, label);
+    await setLabel(n, label);
   }
+  if (!art) return;
+  if (!hasSound) return setStatus('Bild/Emoji braucht einen Sound auf der Taste.', true);
+  try { await applyArt(n, art); setStatus(`Taste ${state.slots[n - 1].key}: gespeichert`); }
+  catch (e) { setStatus(e.message, true); }
 });
 
 async function setLabel(n, label) {
@@ -528,7 +741,8 @@ async function importUrl(n, url, label = null) {
       body: JSON.stringify({ slot: n, url, label })
     });
     render(); setStatus(`Taste ${state.slots[n - 1].key}: ${state.slots[n - 1].name}`);
-  } catch (e) { setStatus(e.message, true); }
+    return true;
+  } catch (e) { setStatus(e.message, true); return false; }
 }
 
 async function upload(n, file) {
