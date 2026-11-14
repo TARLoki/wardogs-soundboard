@@ -7,7 +7,7 @@ A soundboard for the proximity voice chat in **WARDOGS** (Bulkhead) – meme sou
 
 <p align="center"><img src="docs/images/board.png" width="460" alt="Soundboard-Oberfläche / soundboard interface"></p>
 
-**[⬇ Download (neueste Version / latest release)](https://github.com/TARLoki/wardogs-soundboard/releases/latest)**
+**[⬇ Download (neueste Version / latest release)](https://github.com/TARLoki/wardogs-soundboard/releases/latest)** · **[📖 Wiki](https://github.com/TARLoki/wardogs-soundboard/wiki)**
 
 ---
 
@@ -44,7 +44,8 @@ Das Spiel wird **nicht verändert** – keine Dateien, kein Speicherzugriff. Das
 5. In WARDOGS als Mikrofon **CABLE Output (VB-Audio Virtual Cable)** wählen
 6. Auf eine Kachel klicken, Myinstants-Link einfügen, speichern – fertig
 
-📄 **Ausführliche Anleitung mit Bildern:** [docs/WARDOGS-Soundboard-Anleitung.docx](docs/WARDOGS-Soundboard-Anleitung.docx) – oder in der Oberfläche unter **Anleitung**.
+📖 **Ausführliche Hilfe im [Wiki](https://github.com/TARLoki/wardogs-soundboard/wiki)** – Installation, Einstellungen, Fehlerbehebung, FAQ.
+📄 Anleitung zum Ausdrucken: [docs/WARDOGS-Soundboard-Anleitung.docx](docs/WARDOGS-Soundboard-Anleitung.docx) – oder in der Oberfläche unter **Anleitung**.
 
 ### Wichtige Hinweise
 
@@ -67,7 +68,7 @@ Das Spiel wird **nicht verändert** – keine Dateien, kein Speicherzugriff. Das
 - **Setup check** with a step-by-step guide built into the interface
 - **Desktop shortcut** that starts the soundboard and WARDOGS together and closes the soundboard after the game
 
-> The user interface and the detailed guide are currently **German only**.
+> The user interface and the detailed guide are currently **German only**. See the [English wiki page](https://github.com/TARLoki/wardogs-soundboard/wiki/English) for a short guide.
 
 ### How it works
 
