@@ -29,9 +29,10 @@
 - **Sources** in the tile dialog: link, **Datei …** (file), **● Aufnehmen** (record via your mic), **Text → Sprache** (text-to-speech). **Funk-Effekt** = radio effect.
 - **Titel** = custom title (leave empty for automatic).
 - **Bild oder Emoji** = image or emoji as tile background: file, Ctrl+V, image link, library or emoji picker – or drop an image onto a tile. It is tied to the sound and reset when the sound is replaced; images stay in the library (`sounds\images`).
-- Push-to-talk: while a sound plays, the soundboard holds **K** – only when WARDOGS is the active window. Change with `PTT_KEY` in `soundboard.py`, or `PTT_KEY = None` to disable.
+- Push-to-talk: while a sound plays, the soundboard holds **K** – only when WARDOGS is the active window. Change it in the **Einstellungen** (settings) tab → *Sprechtaste im Spiel*, or switch off *Sprechtaste beim Abspielen automatisch halten*.
+- **Einstellungen** (settings) tab: microphone, push-to-talk key, volumes etc., saved to `sounds\settings.json`. **Links** tab: web pages the desktop shortcut opens on start (tick *beim Start*), saved to `sounds\links.json`. Both survive updates.
 - Keep the console window open while playing – your voice runs through the soundboard.
-- When a new release is published, a green notice with a download link appears at the top (checked via GitHub every 12 hours; `CHECK_UPDATES = False` disables it). Update by copying the program files – keep your `sounds` folder.
+- When a new release is published, a green notice with a download link appears at the top (checked via GitHub every 12 hours; can be switched off in the **Einstellungen** tab). Update by copying the program files – keep your `sounds` folder.
 
 ## Notes
 

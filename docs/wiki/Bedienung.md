@@ -27,7 +27,7 @@ Beim Klicken im Browser ist der Browser das aktive Fenster – die automatische 
 
 ## Vom Handy bedienen
 
-1. In `soundboard.py` `WEB_HOST = "0.0.0.0"` setzen und das Soundboard neu starten.
+1. Reiter **Einstellungen** → **Erreichbar von** → **Auch vom Handy im Heimnetz**, speichern und das Soundboard neu starten.
 2. Die IP-Adresse des PCs herausfinden (PowerShell: `ipconfig` → IPv4-Adresse).
 3. Am Handy im selben WLAN `http://<PC-IP>:8765` öffnen.
 

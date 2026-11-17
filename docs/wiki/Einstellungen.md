@@ -1,78 +1,80 @@
 # Einstellungen
 
-Alle Optionen stehen oben in `soundboard.py` im Abschnitt **Konfiguration**. Datei per Rechtsklick → **Öffnen mit** → **Editor** bearbeiten, speichern, Soundboard neu starten.
+Ab Version 2.1 stellst du alles in der Oberfläche ein: Reiter **Einstellungen** (`http://localhost:8765/#einstellungen`). Ändern, **Speichern** – fertig. Du musst `soundboard.py` nicht mehr bearbeiten.
 
-Gerätenamen anzeigen: `python soundboard.py --list` – bei Gerätenamen reicht immer ein Teil, Groß-/Kleinschreibung egal.
+- Gespeichert wird in `sounds\settings.json`, und zwar nur, was vom Standard abweicht. Die Datei **bleibt bei Updates erhalten**, weil du beim Update nur die Programmdateien ersetzt.
+- Geänderte, noch nicht gespeicherte Felder sind mit **•** markiert. **↺** setzt ein Feld auf den Standard zurück, **Alles auf Standard** alle Felder (wirksam erst mit **Speichern**). **Verwerfen** holt die gespeicherten Werte zurück.
+- Kleine Hinweise neben dem Namen sagen, wann eine Änderung wirkt:
+  - ohne Hinweis: **sofort**
+  - **Ton kurz neu**: Audio startet beim Speichern kurz neu (Sekundenbruchteil Stille)
+  - **lädt Sounds neu**: alle Seiten werden neu eingelesen
+  - **ab nächstem Start** / **nach Neustart**: Soundboard einmal beenden und neu starten
+- Neu angeschlossene Geräte erscheinen in den Auswahllisten nach einem Neustart des Soundboards.
+
+<img src="https://raw.githubusercontent.com/TARLoki/wardogs-soundboard/main/docs/images/einstellungen.png" width="520" alt="Reiter Einstellungen">
 
 ## Audio
 
-| Option | Standard | Bedeutung |
+| Einstellung | Standard | Bedeutung |
 |---|---|---|
-| `CABLE_DEVICE` | `"CABLE Input"` | Name des VB-Cable-Wiedergabegeräts |
-| `MIC_PASSTHROUGH` | `True` | Mikrofon mit ins Kabel mischen |
-| `MIC_DEVICE` | `None` | Mikrofon; `None` = Windows-Standard, sonst z. B. `"QuadCast"` |
-| `MIC_VOLUME` | `1.0` | Lautstärke des Mikrofons |
-| `MONITOR` | `True` | Sounds selbst über das Headset mithören |
-| `MONITOR_DEVICE` | `None` | Ausgabe zum Mithören; `None` = Windows-Standard |
-| `MONITOR_VOLUME` | `0.4` | Lautstärke beim Mithören |
+| Mikrofon | Windows-Standard | Dein Mikrofon, z. B. *Mikrofon (2- HyperX QuadCast S)* |
+| Mikrofon ins Spiel durchleiten | an | Aus = nur Sounds, deine Stimme geht nicht über das Soundboard |
+| Mikrofon-Lautstärke | 100 % | bis 200 % |
+| Sounds selbst mithören | an | Sounds zusätzlich im eigenen Headset |
+| Ausgabe zum Mithören | Windows-Standard | dein Headset – **nicht** das VB-Cable |
+| Lautstärke beim Mithören | 40 % | |
+| VB-Cable (Wiedergabegerät) | CABLE Input | nur ändern, wenn du ein anderes virtuelles Kabel nutzt |
 
 ## Sounds
 
-| Option | Standard | Bedeutung |
+| Einstellung | Standard | Bedeutung |
 |---|---|---|
-| `SOUND_VOLUME` | `0.7` | Startlautstärke (1.0 = 100 %) |
-| `MAX_VOLUME` | `2.0` | Obergrenze des Reglers (200 %) |
-| `NORMALIZE` | `True` | leise Sounds beim Laden anheben |
-| `LIMIT_THRESHOLD` | `0.7` | ab hier rundet der Soft-Limiter Spitzen ab |
-| `EXCLUSIVE` | `True` | neuer Sound beendet laufende Sounds |
-| `MAX_SECONDS` | `90` | längere Sounds werden gekürzt |
-| `KEEP_NUMLOCK` | `True` | NumLock nach Druck zurückschalten |
-| `RECORD_MAX_SECONDS` | `30` | Aufnahmen enden spätestens nach dieser Zeit |
+| Lautstärke beim Start | 70 % | Startwert des Reglers auf der Soundboard-Seite |
+| Leise Sounds automatisch anheben | an | Normalisierung beim Laden |
+| Neuer Sound beendet laufende Sounds | an | aus = Sounds überlagern sich |
+| Maximale Sound-Länge | 1,5 Minuten | längere Sounds werden gekürzt |
+| Maximale Aufnahmelänge | 30 Sekunden | für **● Aufnehmen** |
+
+## Sprechtaste (Push-to-Talk)
+
+| Einstellung | Standard | Bedeutung |
+|---|---|---|
+| Sprechtaste beim Abspielen automatisch halten | an | aus = kein simulierter Tastendruck; im Spiel dann Sprachaktivierung nutzen |
+| Sprechtaste im Spiel | `k` | **Taste drücken …** klicken und die Taste drücken. Numpad-Tasten sind für Sounds reserviert. |
+| Nur wenn dieses Fenster aktiv ist | `WARDOGS` | Teil des Fenstertitels; leer = immer drücken (nicht empfohlen) |
+| Vorlauf vor dem Sound | 0,15 s | Zeit zwischen Tastendruck und Soundstart |
+| Nachlauf nach dem Sound | 0,25 s | so lange bleibt die Taste nach Soundende gedrückt |
 
 ## Seiten und Sprachausgabe
 
-| Option | Standard | Bedeutung |
+| Einstellung | Standard | Bedeutung |
 |---|---|---|
-| `PAGE_KEYS` | `True` | Bild ↑ / Bild ↓ wechseln die Seite |
-| `ANNOUNCE_PAGES` | `True` | Seitenname beim Wechsel im eigenen Headset ansagen (ohne Windows-Stimme: kurze Töne) |
-| `TTS_LANG` | `"de"` | Sprache der Windows-Stimme für Text-to-Speech und Ansagen |
-| `TTS_RATE` | `0` | Sprechtempo von -10 (langsam) bis 10 (schnell) |
+| Bild ↑ / Bild ↓ wechseln die Seite | an | |
+| Seitennamen im Headset ansagen | an | ohne Windows-Stimme: kurze Töne |
+| Sprache der Windows-Stimme | `de` | Auswahl aus den installierten Stimmen |
+| Sprechtempo | 0 | -10 (langsam) bis 10 (schnell) |
+| NumLock nach Druck zurückschalten | an | |
 
-## Push-to-Talk
+## Weboberfläche und Start
 
-| Option | Standard | Bedeutung |
+| Einstellung | Standard | Bedeutung |
 |---|---|---|
-| `PTT_KEY` | `"k"` | Sprechtaste im Spiel; `None` = automatischen Tastendruck abschalten |
-| `PTT_WINDOW` | `"WARDOGS"` | nur drücken, wenn ein Fenster mit diesem Titel aktiv ist; `None` = immer |
-| `PTT_PREROLL` | `0.15` | Sekunden zwischen Tastendruck und Soundstart |
-| `PTT_TAIL` | `0.25` | Sekunden, die die Taste nach Soundende gehalten wird |
+| Erreichbar von | Nur von diesem PC | **Auch vom Handy im Heimnetz** – siehe [Bedienung](Bedienung#vom-handy-bedienen) |
+| Port | 8765 | nur ändern, wenn der Port belegt ist; die Desktopverknüpfung übernimmt ihn automatisch |
+| Browser beim Start öffnen | an | gilt für `start.bat`; die Desktopverknüpfung öffnet die Oberfläche immer |
+| Nach neuen Versionen suchen | an | beim Start und alle 12 Stunden bei GitHub nachfragen |
 
-## Weboberfläche
+Gibt es eine neuere Version, erscheint oben in der Oberfläche ein grüner Hinweis mit Download-Link (pro Version ausblendbar). **Installiert wird nichts automatisch.**
 
-| Option | Standard | Bedeutung |
-|---|---|---|
-| `WEB_HOST` | `"127.0.0.1"` | `"0.0.0.0"` = auch vom Handy im Heimnetz erreichbar |
-| `WEB_PORT` | `8765` | Port der Oberfläche |
-| `OPEN_BROWSER` | `True` | Browser beim Start öffnen |
+## Links
 
-## Updates
+Webseiten für die Desktopverknüpfung stellst du im Reiter **Links** ein, siehe [Links](Links).
 
-| Option | Standard | Bedeutung |
-|---|---|---|
-| `CHECK_UPDATES` | `True` | beim Start und alle 12 Stunden bei GitHub nach einer neuen Version fragen |
-| `UPDATE_INTERVAL` | `43200` | Sekunden zwischen zwei Prüfungen (12 Stunden) |
+## Für Fortgeschrittene
 
-Gibt es eine neuere Version, erscheint oben in der Oberfläche ein grüner Hinweis mit Download-Link (pro Version ausblendbar), außerdem ein Eintrag im Einrichtungs-Check und in der Konsole. **Installiert wird nichts automatisch.**
+Die Standardwerte stehen weiterhin oben in `soundboard.py` (Abschnitt **Konfiguration**), dazu einige Werte ohne Feld in der Oberfläche, z. B. `MAX_VOLUME`, `LIMIT_THRESHOLD`, `NORMALIZE_PEAK`, `UPDATE_INTERVAL`. Werte aus `sounds\settings.json` haben Vorrang. Wer `soundboard.py` ändert, muss das nach jedem Update wiederholen.
 
-## Desktopverknüpfung (`wardogs_start.pyw`)
-
-| Option | Standard | Bedeutung |
-|---|---|---|
-| `OPEN_URLS` | Soundboard, n4lab, wardogs.zone | Seiten, die beim Start als Browser-Tabs geöffnet werden; `[]` = keine |
-| `AUTO_QUIT` | `True` | Soundboard beenden, wenn WARDOGS geschlossen wird |
-| `GONE_GRACE` | `20` | Sekunden, die das Spiel weg sein muss |
-| `WAIT_FOR_GAME` | `900` | maximale Wartezeit auf den Spielstart (Steam-Updates) |
-| `PORT` | `8765` | muss zu `WEB_PORT` passen |
+`wardogs_start.pyw` (Desktopverknüpfung): `AUTO_QUIT` (Soundboard nach dem Spiel beenden), `GONE_GRACE` (20 s), `WAIT_FOR_GAME` (900 s).
 
 ## Befehlszeile
 

@@ -35,10 +35,15 @@ Einrichtung:
   Beim Start prüft das Tool VB-Cable, Mikrofon, Ausgabe und Hotkeys. Fehlt etwas,
   öffnet sich die Weboberfläche mit der Anleitung (Menüpunkt "Anleitung").
 
+Einstellungen und Links:
+  Reiter „Einstellungen“ (Mikrofon, Sprechtaste, Lautstärken …) -> sounds/settings.json
+  Reiter „Links“ (Webseiten für die Desktopverknüpfung)          -> sounds/links.json
+  Beides überlebt Updates und hat Vorrang vor den Standardwerten unten.
+
 Updates:
   Beim Start und alle 12 Stunden fragt das Tool bei GitHub die neueste Version ab und
   zeigt einen Hinweis mit Download-Link. Installiert wird nichts automatisch.
-  Abschalten: CHECK_UPDATES = False.
+  Abschalten: Reiter „Einstellungen“.
 
 Platzbelegung:
   Dateien mit Präfix landen fest auf diesem Platz, z. B. "3_leeroy.mp3",
@@ -93,9 +98,11 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 
-VERSION = "2.0.2"
+VERSION = "2.1"
 
 # ============================ Konfiguration ============================
+# Standardwerte. Fast alles lässt sich bequemer im Reiter „Einstellungen“ der
+# Weboberfläche ändern; das landet in sounds/settings.json und überlebt Updates.
 
 BASE_DIR = Path(__file__).parent
 SOUND_DIR = BASE_DIR / "sounds"            # je Seite ein Unterordner, z. B. sounds/Kommandos
@@ -132,7 +139,8 @@ TTS_LANG = "de"                # Sprache der Windows-Stimme für Text-to-Speech 
 TTS_RATE = 0                   # Sprechtempo -10 (langsam) bis 10 (schnell)
 RECORD_MAX_SECONDS = 30        # Aufnahmen enden spätestens nach dieser Zeit
 
-PTT_KEY = "k"                  # Push-to-Talk-Taste im Spiel, None = abschalten
+PTT_ENABLED = True             # Sprechtaste beim Abspielen automatisch halten
+PTT_KEY = "k"                  # Push-to-Talk-Taste im Spiel
 PTT_WINDOW = "WARDOGS"         # nur drücken, wenn dieses Fenster aktiv ist (None = immer)
 PTT_PREROLL = 0.15             # Sekunden zwischen Tastendruck und Soundstart
 PTT_TAIL = 0.25                # Sekunden, die die Taste nach Soundende noch gehalten wird
@@ -443,7 +451,7 @@ def check_devices(setup: Setup, refresh=False) -> dict:
 
     # --- Ausgabe zum Mithören ---
     if not MONITOR:
-        setup.set("monitor", "info", "Mithören ist ausgeschaltet", "MONITOR = False")
+        setup.set("monitor", "info", "Mithören ist ausgeschaltet", "Einstellungen → Audio")
     else:
         idx = match_device(MONITOR_DEVICE, output=True) if MONITOR_DEVICE else None
         name = device_name(idx, True)
@@ -462,7 +470,7 @@ def check_devices(setup: Setup, refresh=False) -> dict:
 
     # --- Mikrofon ---
     if not MIC_PASSTHROUGH:
-        setup.set("mic", "info", "Mikrofon-Durchleitung ist ausgeschaltet", "MIC_PASSTHROUGH = False")
+        setup.set("mic", "info", "Mikrofon-Durchleitung ist ausgeschaltet", "Einstellungen → Audio")
     else:
         idx = match_device(MIC_DEVICE, output=False) if MIC_DEVICE else None
         name = device_name(idx, False)
@@ -551,7 +559,19 @@ class AudioEngine:
             except Exception:
                 pass
         self.streams = []
+        self.mic_active = False
+        self.board.mic_ready = False
         self.board.audio_ready = False
+
+    def restart(self) -> bool:
+        """Nach geänderten Audio-Einstellungen alle Streams neu öffnen."""
+        self.stop()
+        self.board.monitor = Player() if MONITOR else None
+        self.mic = MicBuffer(BLOCK * 6) if MIC_PASSTHROUGH else None
+        devs = check_devices(self.board.setup, refresh=True)
+        ok = self.start(devs)
+        print("Audio neu gestartet." if ok else "! Audio konnte nicht neu gestartet werden.")
+        return ok
 
 
 def check_static(setup: Setup, board):
@@ -602,6 +622,230 @@ def write_json(path: Path, data: dict):
         tmp.replace(path)
     except Exception as e:
         print(f"  ! {path.name} konnte nicht gespeichert werden: {e}")
+
+
+# ----------------------------------------------------------------------
+# Einstellungen (Reiter „Einstellungen“) und Links (Reiter „Links“)
+# Gespeichert in sounds/settings.json bzw. sounds/links.json – beides überlebt Updates.
+# ----------------------------------------------------------------------
+
+SETTINGS_FILE = SOUND_DIR / "settings.json"
+LINKS_FILE = SOUND_DIR / "links.json"
+DEFAULT_LINKS = [
+    {"name": "wardogs.n4lab.dev", "url": "https://wardogs.n4lab.dev", "start": False},
+    {"name": "wardogs.zone – Loadouts", "url": "https://wardogs.zone/loadouts/base", "start": False},
+]
+MAX_LINKS = 30
+
+# apply: live = sofort, audio = Audio neu starten, reload = Sounds neu laden,
+#        ptt = Sprechtaste neu einrichten, next = beim nächsten Start, restart = Neustart nötig
+SETTINGS = [
+    ("Audio", [
+        dict(key="MIC_DEVICE", type="device_in", label="Mikrofon", apply="audio",
+             help="Wird zusammen mit den Sounds ins Spiel geschickt."),
+        dict(key="MIC_PASSTHROUGH", type="bool", label="Mikrofon ins Spiel durchleiten", apply="audio",
+             help="Aus = nur Sounds, deine Stimme geht dann nicht über das Soundboard."),
+        dict(key="MIC_VOLUME", type="percent", label="Mikrofon-Lautstärke", min=0, max=2, step=0.05, apply="live"),
+        dict(key="MONITOR", type="bool", label="Sounds selbst mithören", apply="audio"),
+        dict(key="MONITOR_DEVICE", type="device_out", label="Ausgabe zum Mithören", apply="audio",
+             help="Dein Headset. Nicht das VB-Cable wählen."),
+        dict(key="MONITOR_VOLUME", type="percent", label="Lautstärke beim Mithören", min=0, max=1, step=0.05, apply="live"),
+        dict(key="CABLE_DEVICE", type="device_out", label="VB-Cable (Wiedergabegerät)", apply="audio", nodefault=True,
+             help="Normalerweise „CABLE Input“ – nur ändern, wenn du ein anderes virtuelles Kabel nutzt."),
+    ]),
+    ("Sounds", [
+        dict(key="SOUND_VOLUME", type="percent", label="Lautstärke beim Start", min=0, max=2, step=0.05, apply="next",
+             help="Startwert des Reglers auf der Soundboard-Seite."),
+        dict(key="NORMALIZE", type="bool", label="Leise Sounds automatisch anheben", apply="reload"),
+        dict(key="EXCLUSIVE", type="bool", label="Neuer Sound beendet laufende Sounds", apply="live"),
+        dict(key="MAX_SECONDS", type="select", label="Maximale Sound-Länge", apply="reload",
+             options=[(30, "30 Sekunden"), (60, "1 Minute"), (90, "1,5 Minuten"), (120, "2 Minuten"),
+                      (180, "3 Minuten"), (300, "5 Minuten")]),
+        dict(key="RECORD_MAX_SECONDS", type="select", label="Maximale Aufnahmelänge", apply="live",
+             options=[(10, "10 Sekunden"), (20, "20 Sekunden"), (30, "30 Sekunden"), (60, "1 Minute")]),
+    ]),
+    ("Sprechtaste (Push-to-Talk)", [
+        dict(key="PTT_ENABLED", type="bool", label="Sprechtaste beim Abspielen automatisch halten", apply="ptt",
+             help="Aus = keine simulierte Taste; im Spiel dann Sprachaktivierung nutzen."),
+        dict(key="PTT_KEY", type="key", label="Sprechtaste im Spiel", apply="ptt"),
+        dict(key="PTT_WINDOW", type="text", label="Nur wenn dieses Fenster aktiv ist", apply="live",
+             help="Teil des Fenstertitels. Leer = immer drücken (nicht empfohlen)."),
+        dict(key="PTT_PREROLL", type="seconds", label="Vorlauf vor dem Sound", min=0, max=1, step=0.05, apply="live"),
+        dict(key="PTT_TAIL", type="seconds", label="Nachlauf nach dem Sound", min=0, max=2, step=0.05, apply="live"),
+    ]),
+    ("Seiten und Sprachausgabe", [
+        dict(key="PAGE_KEYS", type="bool", label="Bild ↑ / Bild ↓ wechseln die Seite", apply="live"),
+        dict(key="ANNOUNCE_PAGES", type="bool", label="Seitennamen im Headset ansagen", apply="live"),
+        dict(key="TTS_LANG", type="voice", label="Sprache der Windows-Stimme", apply="live"),
+        dict(key="TTS_RATE", type="int", label="Sprechtempo", min=-10, max=10, step=1, apply="live",
+             help="-10 langsam … 10 schnell"),
+        dict(key="KEEP_NUMLOCK", type="bool", label="NumLock nach Druck zurückschalten", apply="live"),
+    ]),
+    ("Weboberfläche und Start", [
+        dict(key="WEB_HOST", type="select", label="Erreichbar von", apply="restart",
+             options=[("127.0.0.1", "Nur von diesem PC"), ("0.0.0.0", "Auch vom Handy im Heimnetz")]),
+        dict(key="WEB_PORT", type="int", label="Port", min=1024, max=65535, step=1, apply="restart",
+             help="Nur ändern, wenn 8765 schon belegt ist. Lesezeichen dann anpassen."),
+        dict(key="OPEN_BROWSER", type="bool", label="Browser beim Start öffnen (ohne Desktopverknüpfung)", apply="next"),
+        dict(key="CHECK_UPDATES", type="bool", label="Nach neuen Versionen suchen", apply="live"),
+    ]),
+]
+SETTING_ITEMS = {i["key"]: i for _, items in SETTINGS for i in items}
+DEFAULTS = {k: globals().get(k) for k in SETTING_ITEMS}      # Werte aus dieser Datei
+
+
+def _validate(item, v):
+    t = item["type"]
+    if t == "bool":
+        return bool(v)
+    if t in ("percent", "seconds"):
+        return round(min(item["max"], max(item["min"], float(v))), 3)
+    if t == "int":
+        return int(min(item["max"], max(item["min"], int(float(v)))))
+    if t == "select":
+        opts = [o[0] for o in item["options"]]
+        for o in opts:
+            if str(o) == str(v):
+                return o
+        raise ValueError(f"Ungültiger Wert für „{item['label']}“")
+    if t in ("device_in", "device_out", "text", "voice"):
+        v = (str(v).strip() if v is not None else "")[:80]
+        if t == "voice" and not re.match(r"^[A-Za-z]{2}(-[A-Za-z]{2})?$", v or "de"):
+            raise ValueError("Ungültige Sprache")
+        if item.get("nodefault") and not v:
+            return DEFAULTS[item["key"]]
+        return v or None
+    if t == "key":
+        v = str(v or "").strip().lower()
+        if not v:
+            raise ValueError("Bitte eine Sprechtaste festlegen")
+        try:
+            keyboard.key_to_scan_codes(v)
+        except Exception:
+            raise ValueError(f"Unbekannte Taste „{v}“")
+        return v
+    raise ValueError("Unbekannter Typ")
+
+
+def load_settings():
+    """Gespeicherte Einstellungen beim Start über die Standardwerte legen."""
+    data = read_json(SETTINGS_FILE)
+    n = 0
+    for k, v in data.items():
+        if k in SETTING_ITEMS:
+            try:
+                globals()[k] = _validate(SETTING_ITEMS[k], v)
+                n += 1
+            except Exception as e:
+                print(f"  ! Einstellung {k} ignoriert: {e}")
+    if n:
+        print(f"Einstellungen aus {SETTINGS_FILE.name} geladen ({n} geändert).")
+
+
+def save_settings():
+    diff = {k: globals()[k] for k in SETTING_ITEMS if globals()[k] != DEFAULTS[k]}
+    write_json(SETTINGS_FILE, diff)
+
+
+def device_names(output: bool):
+    """Gerätenamen für die Auswahlfelder (MME-Namen, wie sie auch zum Öffnen verwendet werden)."""
+    key = "max_output_channels" if output else "max_input_channels"
+    try:
+        apis = sd.query_hostapis()
+        devs = list(sd.query_devices())
+    except Exception:
+        return []
+    names = []
+    for prefer_mme in (True, False):
+        for d in devs:
+            is_mme = apis[d["hostapi"]]["name"] == "MME"
+            if d[key] > 0 and is_mme == prefer_mme and d["name"] not in names:
+                names.append(d["name"])
+        if names:
+            break
+    return [n for n in names if "zuordnung" not in n.lower() and "mapper" not in n.lower()]
+
+
+VOICES = []          # [(Kultur, Name)] – wird im Hintergrund von check_tts gefüllt
+
+
+def settings_info():
+    groups = []
+    for title, items in SETTINGS:
+        rows = []
+        for i in items:
+            row = {k: v for k, v in i.items() if k != "options"}
+            if "options" in i:
+                row["options"] = [{"value": o[0], "label": o[1]} for o in i["options"]]
+            row["value"] = globals()[i["key"]]
+            row["default"] = DEFAULTS[i["key"]]
+            rows.append(row)
+        groups.append({"title": title, "items": rows})
+    cultures = sorted({c for c, _ in VOICES})
+    return {
+        "groups": groups,
+        "devices": {"in": device_names(False), "out": device_names(True)},
+        "voices": [{"lang": c, "names": [n for cc, n in VOICES if cc == c]} for c in cultures],
+        "file": str(SETTINGS_FILE),
+    }
+
+
+def apply_settings(values: dict, board, engine):
+    """Neue Werte prüfen, übernehmen, speichern und wo möglich sofort anwenden."""
+    new = {}
+    for k, v in (values or {}).items():
+        if k in SETTING_ITEMS:
+            new[k] = _validate(SETTING_ITEMS[k], v)
+    changed = [k for k, v in new.items() if globals()[k] != v]
+    for k in changed:
+        globals()[k] = new[k]
+    save_settings()
+    actions = {SETTING_ITEMS[k]["apply"] for k in changed}
+    if "audio" in actions and engine is not None:
+        engine.restart()
+    if "reload" in actions:
+        board.reload(quiet=True)
+    if "ptt" in actions:
+        board.reset_ptt()
+    if "CHECK_UPDATES" in changed:
+        if CHECK_UPDATES:
+            threading.Thread(target=check_update, args=(board.setup,), daemon=True).start()
+        else:
+            board.setup.set("update", "info", "Update-Prüfung ist ausgeschaltet", "Einstellungen → Weboberfläche und Start")
+    if changed:
+        print("Einstellungen geändert: " + ", ".join(SETTING_ITEMS[k]["label"] for k in changed))
+    return {
+        "changed": [SETTING_ITEMS[k]["label"] for k in changed],
+        "restart": [SETTING_ITEMS[k]["label"] for k in changed if SETTING_ITEMS[k]["apply"] == "restart"],
+        "next": [SETTING_ITEMS[k]["label"] for k in changed if SETTING_ITEMS[k]["apply"] == "next"],
+    }
+
+
+def load_links():
+    data = read_json(LINKS_FILE)
+    if "links" not in data:
+        return [dict(x) for x in DEFAULT_LINKS]
+    return data["links"]
+
+
+def save_links(links):
+    clean = []
+    for l in (links or [])[:MAX_LINKS]:
+        url = str(l.get("url", "")).strip()
+        if not url:
+            continue
+        if not re.match(r"^[a-z][a-z0-9+.-]*://", url, re.I):
+            if re.match(r"^[a-z][a-z0-9+.-]*:(?!\d)", url, re.I):      # javascript:, file:, mailto: …
+                raise ValueError(f"Ungültige Adresse: {url} (nur http:// oder https://)")
+            url = "https://" + url
+        u = urllib.parse.urlparse(url)
+        if u.scheme not in ("http", "https") or not u.netloc or any(c in url for c in ' "<>'):
+            raise ValueError(f"Ungültige Adresse: {url} (nur http:// oder https://)")
+        name = str(l.get("name") or "").strip()[:40] or u.netloc
+        clean.append({"name": name, "url": url, "start": bool(l.get("start"))})
+    write_json(LINKS_FILE, {"links": clean})
+    return clean
+
 
 
 def clean_emoji(text: str):
@@ -679,11 +923,13 @@ def check_tts(setup):
     if not tts_available():
         setup.set("tts", "info", "Text-to-Speech nur unter Windows verfügbar")
         return
+    global VOICES
     try:
         voices = tts_voices()
     except Exception as e:
         setup.set("tts", "warn", "Sprachausgabe nicht verfügbar", str(e))
         return
+    VOICES = voices
     lang = [v for v in voices if v[0].lower().startswith(TTS_LANG.lower())]
     if lang:
         setup.set("tts", "ok", "Sprachausgabe bereit", lang[0][1])
@@ -953,7 +1199,7 @@ class Board:
         self.volume = SOUND_VOLUME
         self.cable = Player()
         self.monitor = Player() if MONITOR else None
-        self.ptt = PushToTalk(PTT_KEY) if PTT_KEY else None
+        self.ptt = PushToTalk(PTT_KEY) if PTT_ENABLED and PTT_KEY else None
         self.file_lock = threading.RLock()
         self.gen = 0
         self.audio_ready = False
@@ -1310,6 +1556,11 @@ class Board:
     def set_volume(self, v):
         self.volume = min(MAX_VOLUME, max(0.0, float(v)))
 
+    def reset_ptt(self):
+        if self.ptt:
+            self.ptt.release_now()
+        self.ptt = PushToTalk(PTT_KEY) if PTT_ENABLED and PTT_KEY else None
+
     def reload(self, quiet=False):
         for p in self.pages:
             p.reload(quiet=quiet)
@@ -1434,13 +1685,17 @@ def check_update(setup=None):
 
 
 def update_state():
+    if not CHECK_UPDATES:
+        return None
     newer = bool(UPDATE["latest"]) and version_tuple(UPDATE["latest"]) > version_tuple(VERSION)
     return {"version": UPDATE["latest"], "url": UPDATE["url"]} if newer else None
 
 
 def update_loop(setup):
     while True:
-        if check_update(setup):
+        if not CHECK_UPDATES:
+            setup.set("update", "info", "Update-Prüfung ist ausgeschaltet", "Einstellungen → Weboberfläche und Start")
+        elif check_update(setup):
             print(f"\n*** Neue Version {UPDATE['latest']} verfügbar (installiert: {VERSION}) ***")
             print(f"    Download: {UPDATE['url']}\n")
         if QUIT.wait(UPDATE_INTERVAL):
@@ -1499,6 +1754,10 @@ def make_handler(board: Board, engine=None):
                 self.send(200, setup_info(board))
             elif path == "/api/images":
                 self.send(200, {"images": board.list_images()})
+            elif path == "/api/settings":
+                self.send(200, settings_info())
+            elif path == "/api/links":
+                self.send(200, {"links": load_links(), "file": str(LINKS_FILE)})
             elif path.startswith("/images/"):
                 name = path[len("/images/"):]
                 file = IMG_DIR / name
@@ -1642,6 +1901,17 @@ def make_handler(board: Board, engine=None):
                         engine.start(devs)
                     board.setup.print()
                     return self.send(200, setup_info(board))
+                if parts == ["api", "settings"]:
+                    res = apply_settings(self.json().get("values"), board, engine)
+                    return self.send(200, dict(settings_info(), result=res))
+                if parts == ["api", "links"]:
+                    return self.send(200, {"links": save_links(self.json().get("links"))})
+                if parts == ["api", "links", "open"]:
+                    urls = [l["url"] for l in load_links()
+                            if urllib.parse.urlparse(l.get("url", "")).scheme in ("http", "https")]
+                    for u in urls:
+                        webbrowser.open_new_tab(u)
+                    return self.send(200, {"opened": len(urls)})
                 if parts == ["api", "test"]:
                     if not board.test_tone():
                         raise ValueError("Audio läuft nicht – siehe Einrichtungs-Check")
@@ -1667,7 +1937,7 @@ def setup_info(board):
         "config": {
             "folder": str(BASE_DIR),
             "mic_device": MIC_DEVICE or "Windows-Standardmikrofon",
-            "ptt_key": PTT_KEY,
+            "ptt_key": PTT_KEY if PTT_ENABLED else None,
             "ptt_window": PTT_WINDOW,
             "cable_device": CABLE_DEVICE,
         },
@@ -1690,6 +1960,7 @@ def main():
         except Exception:
             pass
     print(f"WARDOGS Soundboard v{VERSION}")
+    load_settings()
     if already_running():
         print(f"\n! Das Soundboard läuft bereits (http://localhost:{WEB_PORT}).")
         print("  Ein zweites würde jeden Sound doppelt abspielen - dieses Fenster wird nicht gebraucht.")
@@ -1782,10 +2053,7 @@ def main():
             board.ensure_announcement(p)
 
     threading.Thread(target=background, daemon=True).start()
-    if CHECK_UPDATES:
-        threading.Thread(target=update_loop, args=(board.setup,), daemon=True).start()
-    else:
-        board.setup.set("update", "info", "Update-Prüfung ist ausgeschaltet", "CHECK_UPDATES = False")
+    threading.Thread(target=update_loop, args=(board.setup,), daemon=True).start()
     if OPEN_BROWSER and "--no-browser" not in sys.argv:
         webbrowser.open(url + ("#anleitung" if board.setup.issues() and not board.audio_ready else ""))
 

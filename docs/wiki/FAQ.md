@@ -2,13 +2,13 @@
 
 ### Ist das ein Cheat? Kann ich gebannt werden?
 Das Soundboard verändert das Spiel nicht: keine Spieldateien, kein Speicherzugriff, keine Injektion. Für WARDOGS ist es ein normales Mikrofon (VB-Cable).
-Die **automatische Sprechtaste** ist allerdings ein simulierter Tastendruck (wie bei Makro-Software). Das Tool ist **inoffiziell** und **nicht von Bulkhead geprüft** – eine Garantie gibt es nicht. Wer ganz sicher gehen will: `PTT_KEY = None` setzen und im Spiel Sprachaktivierung nutzen.
+Die **automatische Sprechtaste** ist allerdings ein simulierter Tastendruck (wie bei Makro-Software). Das Tool ist **inoffiziell** und **nicht von Bulkhead geprüft** – eine Garantie gibt es nicht. Wer ganz sicher gehen will: im Reiter **Einstellungen** „Sprechtaste beim Abspielen automatisch halten“ ausschalten und im Spiel Sprachaktivierung nutzen.
 
 ### Mein Virenscanner warnt – ist das gefährlich?
 Das Tool hört global auf Tastendrücke (für die Numpad-Hotkeys) und drückt selbst eine Taste. Für Heuristiken sieht das ähnlich aus wie ein Keylogger. Ausgewertet werden aber nur die Numpad-Tasten, es wird nichts gespeichert oder verschickt – der komplette Quellcode liegt offen in diesem Repository.
 
 ### Welche Verbindungen ins Internet gibt es?
-- **Update-Prüfung:** beim Start und alle 12 Stunden eine Abfrage an `api.github.com` (nur die Versionsnummer des neuesten Releases). Abschaltbar mit `CHECK_UPDATES = False`.
+- **Update-Prüfung:** beim Start und alle 12 Stunden eine Abfrage an `api.github.com` (nur die Versionsnummer des neuesten Releases). Abschaltbar im Reiter **Einstellungen**.
 - **Links, die du einfügst:** Dann lädt das Tool genau diese eine Seite bzw. Datei (z. B. von Myinstants oder ein Bild).
 
 Sonst nichts – die Weboberfläche läuft lokal auf deinem PC, es werden keine Daten über dich oder deine Sounds verschickt.
@@ -26,7 +26,7 @@ Nein. Viele Meme-Clips stammen aus Filmen, Serien oder Musik. Für den privaten 
 Nein. Verwendet wird die in Windows eingebaute Sprachausgabe – die Texte verlassen deinen PC nicht.
 
 ### Wie aktualisiere ich auf eine neue Version?
-Erscheint oben in der Oberfläche der Hinweis „Neue Version verfügbar“: ZIP herunterladen (vorher „Zulassen“, siehe [Installation](Installation)) und die Programmdateien in deinen Soundboard-Ordner kopieren. **Den Ordner `sounds` nicht überschreiben** – dort liegen deine Seiten, Sounds, Titel, Bilder und Emojis. Hast du in `soundboard.py` Einstellungen geändert (z. B. `MIC_DEVICE`), trage sie danach erneut ein.
+Erscheint oben in der Oberfläche der Hinweis „Neue Version verfügbar“: ZIP herunterladen (vorher „Zulassen“, siehe [Installation](Installation)) und die Programmdateien in deinen Soundboard-Ordner kopieren. **Den Ordner `sounds` nicht überschreiben** – dort liegen deine Seiten, Sounds, Titel, Bilder und Emojis. Einstellungen und Links aus den Reitern **Einstellungen** und **Links** liegen ebenfalls in `sounds` (`settings.json`, `links.json`) und bleiben erhalten. Nur wer selbst in `soundboard.py` etwas geändert hat, muss das erneut eintragen.
 
 ### Gibt es das auf Englisch?
 Die Oberfläche ist derzeit deutsch. Eine Kurzanleitung auf Englisch gibt es unter [English](English).

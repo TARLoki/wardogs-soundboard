@@ -2,7 +2,8 @@
 WARDOGS + Soundboard - Startskript
 ==================================
 1. Startet das Soundboard (Konsole minimiert, ohne Browser), falls es nicht schon läuft
-2. Öffnet die Webseiten aus OPEN_URLS im Browser (Soundboard-Oberfläche und Helfer-Seiten)
+2. Öffnet die Soundboard-Oberfläche und danach die Links, die im Reiter „Links“ ein Häkchen
+   bei „beim Start“ haben (gespeichert in sounds/links.json)
 3. Startet WARDOGS über Steam (steam://rungameid/...), also mit Anti-Cheat und Updates wie gewohnt
 4. Wartet, bis das Spiel läuft, und beendet das Soundboard, sobald das Spiel geschlossen wurde
 
@@ -13,6 +14,7 @@ Protokoll jedes Starts: launcher.log im selben Ordner.
 """
 
 import ctypes
+import json
 import os
 import re
 import subprocess
@@ -29,20 +31,15 @@ GAME_PREFIX = "wardogs"       # Prozesse, deren Name so beginnt, gelten als "Spi
 WAIT_FOR_GAME = 15 * 60       # so lange auf den Spielstart warten (Steam-Updates!), Sekunden
 GONE_GRACE = 20               # Spiel muss so lange weg sein, bevor das Soundboard endet
 AUTO_QUIT = True              # Soundboard beenden, wenn das Spiel geschlossen wird
-PORT = 8765                   # muss zu WEB_PORT in soundboard.py passen
+PORT = 8765                   # Standard; ein im Reiter „Einstellungen“ geänderter Port wird übernommen
 CONSOLE_TITLE = "WARDOGS Soundboard"
-
-# Diese Seiten werden beim Start im Standard-Browser geöffnet (eine Zeile pro Seite,
-# jeweils in Anführungszeichen und mit Komma). Leere Liste [] = nichts öffnen.
-OPEN_URLS = [
-    f"http://localhost:{PORT}",               # Soundboard-Oberfläche
-    "https://wardogs.n4lab.dev",
-    "https://wardogs.zone/loadouts/base",
-]
+OPEN_SOUNDBOARD = True        # Soundboard-Oberfläche im Browser öffnen
+# Weitere Webseiten: in der Oberfläche im Reiter „Links“ festlegen (sounds/links.json).
 
 # =======================================================================
 
 BASE = Path(__file__).resolve().parent
+SOUND_DIR = BASE / "sounds"
 LOG = BASE / "launcher.log"
 NO_WINDOW = 0x08000000        # CREATE_NO_WINDOW
 SHORTCUT_NAME = "WARDOGS + Soundboard.lnk"
@@ -136,8 +133,40 @@ def game_processes():
     return sorted(names)
 
 
+def read_json(path: Path) -> dict:
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def load_port():
+    """Port aus sounds/settings.json (Reiter „Einstellungen“), sonst Standard."""
+    global PORT
+    try:
+        port = int(read_json(SOUND_DIR / "settings.json").get("WEB_PORT", PORT))
+        if 1024 <= port <= 65535:
+            PORT = port
+    except Exception:
+        pass
+
+
+def start_links():
+    """Links mit Häkchen „beim Start“ aus sounds/links.json – nur http/https."""
+    urls = []
+    for item in read_json(SOUND_DIR / "links.json").get("links", []):
+        if not isinstance(item, dict):
+            continue
+        url = str(item.get("url", "")).strip()
+        if item.get("start") and re.match(r"^https?://[^\s\"<>]+$", url, re.I):
+            urls.append(url)
+    return urls
+
+
 def open_pages():
-    for url in OPEN_URLS:
+    urls = ([f"http://localhost:{PORT}"] if OPEN_SOUNDBOARD else []) + start_links()
+    for url in urls:
         try:
             webbrowser.open_new_tab(url)
             log(f"Geöffnet: {url}")
@@ -271,6 +300,7 @@ def main():
     except Exception:
         pass
     log("Start")
+    load_port()
 
     if soundboard_running():
         log("Soundboard läuft bereits.")

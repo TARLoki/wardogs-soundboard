@@ -15,9 +15,9 @@ Im Spiel unter **Einstellungen → Audio** (bzw. Sprachchat):
 
 Du musst beim Abspielen nichts drücken: Das Soundboard hält die Sprechtaste (Standard **K**) automatisch, solange ein Sound läuft – **nur wenn das WARDOGS-Fenster im Vordergrund ist**.
 
-- Andere Sprechtaste? In `soundboard.py` bei `PTT_KEY` eintragen, siehe [Einstellungen](Einstellungen).
-- Meldet die Konsole *„PTT übersprungen, aktives Fenster: …“*, den angezeigten Titel bei `PTT_WINDOW` eintragen.
-- Ohne automatischen Tastendruck: `PTT_KEY = None` und im Spiel Sprachaktivierung nutzen.
+- Andere Sprechtaste? Reiter **Einstellungen** → **Sprechtaste im Spiel** → **Taste drücken …**, siehe [Einstellungen](Einstellungen).
+- Meldet die Konsole *„PTT übersprungen, aktives Fenster: …“*, den angezeigten Titel in den Einstellungen bei **Nur wenn dieses Fenster aktiv ist** eintragen.
+- Ohne automatischen Tastendruck: in den Einstellungen **Sprechtaste beim Abspielen automatisch halten** ausschalten und im Spiel Sprachaktivierung nutzen.
 
 ### Mikrofontest im Spiel
 

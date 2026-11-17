@@ -24,7 +24,8 @@ A soundboard for the proximity voice chat in **WARDOGS** (Bulkhead) – meme sou
 - **Eigene Titel** je Taste, Lautstärke bis 200 % mit Soft-Limiter, leise Clips werden automatisch angehoben
 - **Push-to-Talk automatisch:** hält beim Abspielen die Sprechtaste (Standard `K`) gedrückt – nur wenn WARDOGS das aktive Fenster ist
 - **Einrichtungs-Check** mit Schritt-für-Schritt-Anleitung direkt in der Oberfläche
-- **Desktopverknüpfung**, die Soundboard und WARDOGS zusammen startet und das Soundboard nach dem Spiel beendet
+- **Einstellungen in der Oberfläche:** Mikrofon, Sprechtaste, Lautstärken & Co. per Auswahlfeld – bleiben bei Updates erhalten
+- **Desktopverknüpfung**, die Soundboard und WARDOGS zusammen startet und das Soundboard nach dem Spiel beendet – auf Wunsch mit deinen Lieblings-Webseiten aus dem Reiter **Links**
 - **Update-Hinweis**, sobald hier eine neue Version erscheint (nur Hinweis, keine automatische Installation)
 
 ### So funktioniert es
@@ -54,7 +55,7 @@ Das Spiel wird **nicht verändert** – keine Dateien, kein Speicherzugriff. Das
 ### Wichtige Hinweise
 
 - **Kein offizielles Tool.** Nicht mit Bulkhead verbunden oder von Bulkhead geprüft. Nutzung auf eigenes Risiko.
-- **Anti-Cheat:** Das Soundboard verändert das Spiel nicht. Die automatische Sprechtaste ist allerdings ein simulierter Tastendruck. Wer das nicht möchte, stellt in `soundboard.py` `PTT_KEY = None` ein und nutzt im Spiel Sprachaktivierung.
+- **Anti-Cheat:** Das Soundboard verändert das Spiel nicht. Die automatische Sprechtaste ist allerdings ein simulierter Tastendruck. Wer das nicht möchte, schaltet sie im Reiter **Einstellungen** ab und nutzt im Spiel Sprachaktivierung.
 - **Keine Sounds enthalten.** Viele Meme-Clips stammen aus Filmen, Serien oder Musik – für den privaten Spaß im Voice-Chat okay, zum Weiterverbreiten nicht ohne Weiteres.
 - **Fair bleiben:** Dauerfeuer nervt und führt eher zum Stummschalten.
 
@@ -73,7 +74,8 @@ Das Spiel wird **nicht verändert** – keine Dateien, kein Speicherzugriff. Das
 - **Custom titles** per key, volume up to 200 % with soft limiter, quiet clips are normalized automatically
 - **Automatic push-to-talk:** holds your voice key (default `K`) while a sound plays – only while WARDOGS is the active window
 - **Setup check** with a step-by-step guide built into the interface
-- **Desktop shortcut** that starts the soundboard and WARDOGS together and closes the soundboard after the game
+- **Settings in the interface:** microphone, push-to-talk key, volumes etc. via dropdowns – kept across updates
+- **Desktop shortcut** that starts the soundboard and WARDOGS together and closes the soundboard after the game – optionally opening your favourite web pages from the **Links** tab
 - **Update notice** when a new release is published here (notice only, nothing is installed automatically)
 
 > The user interface and the detailed guide are currently **German only**. See the [English wiki page](https://github.com/TARLoki/wardogs-soundboard/wiki/English) for a short guide.
@@ -100,7 +102,7 @@ The game is **not modified** – no file or memory access. The soundboard mixes 
 ### Important
 
 - **Unofficial tool.** Not affiliated with or reviewed by Bulkhead. Use at your own risk.
-- **Anti-cheat:** The soundboard does not touch the game, but automatic push-to-talk is a simulated key press. If you prefer not to use it, set `PTT_KEY = None` in `soundboard.py` and use voice activation in-game.
+- **Anti-cheat:** The soundboard does not touch the game, but automatic push-to-talk is a simulated key press. If you prefer not to use it, switch it off in the **Einstellungen** (settings) tab and use voice activation in-game.
 - **No sounds included.** Many meme clips come from films, TV or music – fine for private fun in voice chat, not for redistribution.
 - **Play fair:** spamming sounds gets you muted.
 

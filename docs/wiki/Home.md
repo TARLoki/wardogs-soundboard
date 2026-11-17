@@ -22,7 +22,8 @@ Das Spiel wird **nicht verändert**. Das Soundboard mischt dein Mikrofon mit den
 | [Sounds verwalten](Sounds-verwalten) | Myinstants-Links, eigene Dateien, Titel, Bilder und Emojis, Lautstärke |
 | [Bedienung](Bedienung) | Tastenbelegung, Weboberfläche, Bedienung vom Handy |
 | [Desktopverknüpfung](Desktopverknuepfung) | Soundboard und WARDOGS mit einem Klick starten |
-| [Einstellungen](Einstellungen) | Alle Optionen in `soundboard.py` |
+| [Links](Links) | Webseiten, die mit der Desktopverknüpfung öffnen |
+| [Einstellungen](Einstellungen) | Mikrofon, Sprechtaste, Lautstärken … im Reiter „Einstellungen“ |
 | [Fehlerbehebung](Fehlerbehebung) | Häufige Probleme und Lösungen |
 | [FAQ](FAQ) | Anti-Cheat, Sicherheit, Urheberrecht |
 | [English](English) | Short guide in English |

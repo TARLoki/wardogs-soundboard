@@ -9,7 +9,7 @@ Im Soundboard-Ordner auf `verknuepfung_anlegen.py` doppelklicken. Auf dem Deskto
 ## Was passiert beim Start
 
 1. Das Soundboard startet **minimiert** in der Taskleiste, ohne Browser. Läuft es schon, wird es nicht doppelt gestartet.
-2. Im Browser öffnen sich die Seiten aus `OPEN_URLS` als Tabs – standardmäßig die Soundboard-Oberfläche, [wardogs.n4lab.dev](https://wardogs.n4lab.dev) und [wardogs.zone/loadouts/base](https://wardogs.zone/loadouts/base).
+2. Im Browser öffnet sich zuerst die Soundboard-Oberfläche, danach alle Seiten, die im Reiter [Links](Links) ein Häkchen bei **„beim Start“** haben.
 3. WARDOGS startet **über Steam** (`steam://rungameid/1867240`) – mit Launcher, Anti-Cheat und Updates wie gewohnt.
 4. Wird WARDOGS geschlossen, beendet sich das Soundboard nach etwa **20 Sekunden** von selbst.
 
@@ -21,4 +21,4 @@ Die Oberfläche erreichst du über dein Lesezeichen `http://localhost:8765`.
 
 Jeder Start schreibt `launcher.log` in den Soundboard-Ordner: ob das Soundboard gestartet wurde, welche WARDOGS-Prozesse erkannt wurden und wann beendet wurde. Wurde der Ordner verschoben, die Verknüpfung neu anlegen.
 
-Einstellungen dazu stehen oben in `wardogs_start.pyw` (siehe [Einstellungen](Einstellungen)).
+Hast du im Reiter **Einstellungen** einen anderen Port gewählt, übernimmt die Verknüpfung ihn automatisch. Weitere Optionen stehen oben in `wardogs_start.pyw` (siehe [Einstellungen](Einstellungen#für-fortgeschrittene)).

@@ -182,7 +182,54 @@
   details p { font-size: 14px; color: #cfcdc8; margin: 6px 0 0; }
   a.ext { color: var(--accent); }
 
+  /* Links */
+  .links { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .lrow { display: grid; grid-template-columns: auto minmax(0, 1fr) minmax(0, 1.6fr) auto auto auto; gap: 6px; align-items: center; }
+  .lrow input[type=text], .set input[type=text], .set input[type=number], .set select {
+    width: 100%; font: inherit; font-size: 14px; color: var(--text); background: var(--bg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 7px 9px; min-width: 0; }
+  .lrow input.bad { border-color: var(--danger); }
+  .lrow .mv { display: flex; flex-direction: column; gap: 2px; }
+  .lrow .mv button, .lrow .icon { padding: 0 7px; font-size: 12px; line-height: 1.5; }
+  .lrow .icon { padding: 6px 9px; font-size: 14px; text-decoration: none; color: var(--text); background: var(--tile);
+    border: 1px solid var(--line); border-radius: 8px; }
+  .lrow .icon:hover { background: var(--tile-hi); }
+  .lrow label.start { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .lrow.fixed { color: var(--muted); font-size: 14px; }
+  .lrow.fixed .fixname { grid-column: 2 / 4; padding: 7px 0; }
+  .lhead { font-size: 12px; color: var(--muted); }
+  input[type=checkbox] { accent-color: var(--accent); width: 16px; height: 16px; }
+  .saverow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .saverow .grow { flex: 1; }
+  .msg { font-size: 13px; color: var(--muted); margin: 10px 0 0; }
+  .msg.ok { color: var(--ok); } .msg.err { color: var(--danger); } .msg.warn { color: var(--accent); }
+
+  /* Einstellungen */
+  .set { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.1fr); gap: 4px 14px; padding: 10px 0;
+    border-top: 1px solid var(--line); align-items: center; }
+  .set:first-of-type { border-top: 0; }
+  .set .lbl { font-size: 14px; font-weight: 600; }
+  .set .help { grid-column: 1 / -1; font-size: 12px; color: var(--muted); margin: 0; }
+  .set .ctl { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .set .ctl input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+  .set .val { width: 4.2em; text-align: right; font-variant-numeric: tabular-nums; font-size: 13px; }
+  .set.dirty .lbl::after { content: " •"; color: var(--accent); }
+  .set .reset { padding: 1px 7px; font-size: 12px; background: transparent; border-color: transparent; color: var(--muted); }
+  .set .reset:hover { border-color: var(--line); color: var(--text); }
+  .set .keybtn.listen { border-color: var(--accent); color: var(--accent); }
+  .badge { font-size: 11px; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 0 7px; margin-left: 6px; font-weight: 400; white-space: nowrap; display: inline-block; }
+  .stickysave { position: sticky; bottom: 0; background: var(--bg); padding: 10px 0; border-top: 1px solid var(--line); z-index: 3; }
+
   @media (max-width: 520px) {
+    .lrow { grid-template-columns: auto minmax(0, 1fr) auto auto; }
+    .lrow .lurl { grid-column: 2 / 3; grid-row: 2; }
+    .lrow .mv { grid-row: span 2; }
+    .lrow label.start { grid-row: 2; grid-column: 3 / 5; }
+    .lrow.fixed .fixname { grid-column: 2 / 5; }
+    .lhead { display: none; }
+    .tabs { overflow-x: auto; scrollbar-width: none; }
+    .tabs a { padding: 8px 8px; white-space: nowrap; font-size: 14px; }
+    .set { grid-template-columns: 1fr; }
     .grid { gap: 6px; grid-auto-rows: minmax(84px, auto); }
     .tile { padding: 8px; border-radius: 10px; }
     .num { font-size: 18px; }
@@ -206,6 +253,8 @@
 
   <nav class="tabs">
     <a href="#" data-view="board" class="active">Soundboard</a>
+    <a href="#links" data-view="links">Links</a>
+    <a href="#einstellungen" data-view="settings">Einstellungen</a>
     <a href="#anleitung" data-view="guide">Anleitung <span class="dot" id="issueDot"></span></a>
   </nav>
 
@@ -238,6 +287,39 @@
     Klick spielt ab, nochmal klicken stoppt. Über <b>✎</b> Sound (Link, Datei, Aufnahme, Text → Sprache), Titel, Bild oder Emoji festlegen –
     Sound- und Bilddateien lassen sich auch direkt auf eine Kachel ziehen. Ersetzte Sounds landen in <b>sounds/&lt;Seite&gt;/_alt</b>.
   </p>
+  </section>
+
+  <section id="viewLinks" hidden>
+    <div class="card">
+      <h2>Links</h2>
+      <p class="note" style="margin-top:0">Webseiten, die du neben dem Spiel brauchst. Mit Häkchen bei <b>„beim Start“</b> öffnet
+        die Desktopverknüpfung <b>„WARDOGS + Soundboard“</b> sie automatisch – immer nach der Soundboard-Oberfläche.
+        Nur Adressen mit <code>http://</code> oder <code>https://</code>.</p>
+      <div class="links" id="links"></div>
+      <div class="saverow">
+        <button type="button" id="linkAdd">＋ Link hinzufügen</button>
+        <button type="button" id="linkOpenAll" title="Öffnet alle Links im Browser dieses PCs">Alle jetzt öffnen</button>
+        <span class="grow"></span>
+        <button type="button" class="primary" id="linkSave">Speichern</button>
+      </div>
+      <p class="msg" id="linkMsg"></p>
+    </div>
+    <p class="note">Gespeichert in <code id="linkFile">sounds/links.json</code> – bleibt bei Updates erhalten.</p>
+  </section>
+
+  <section id="viewSettings" hidden>
+    <div id="settings"><p class="note">Lade Einstellungen …</p></div>
+    <div class="stickysave">
+      <div class="saverow">
+        <button type="button" id="setDefaults" title="Alle Felder auf die Standardwerte setzen (wird erst mit Speichern übernommen)">Alles auf Standard</button>
+        <span class="grow"></span>
+        <button type="button" id="setUndo">Verwerfen</button>
+        <button type="button" class="primary" id="setSave">Speichern</button>
+      </div>
+      <p class="msg" id="setMsg" hidden></p>
+    </div>
+    <p class="note">Gespeichert in <code id="setFile">sounds/settings.json</code> – bleibt bei Updates erhalten.
+      Nur Abweichungen vom Standard werden gespeichert.</p>
   </section>
 
   <section id="viewGuide" hidden>
@@ -288,9 +370,9 @@ python -m pip install -r requirements.txt</pre>
       <div class="step"><div class="no">5</div><div>
         <h3>Mikrofon im Soundboard <span class="chip" data-check="mic"></span></h3>
         <p>Das Soundboard nimmt dein Mikrofon auf und reicht es zusammen mit den Sounds ins Kabel weiter.
-          Verwendet wird: <b><span data-cfg="mic_device"></span></b>. Ein bestimmtes Mikrofon legst du oben in <code>soundboard.py</code>
-          bei <code>MIC_DEVICE</code> fest, z. B. <code>MIC_DEVICE = "QuadCast"</code> – ein Namensteil reicht.</p>
-        <p class="note">Alle Gerätenamen zeigt <code>python soundboard.py --list</code>.</p>
+          Verwendet wird: <b><span data-cfg="mic_device"></span></b>. Ein bestimmtes Mikrofon (z. B. dein QuadCast) wählst du im Reiter
+          <a class="ext" href="#einstellungen">Einstellungen</a> → <b>Audio</b> → <b>Mikrofon</b> aus. Dort lassen sich auch Sprechtaste,
+          Mithören und Lautstärken einstellen.</p>
       </div></div>
 
       <div class="step"><div class="no">6</div><div>
@@ -368,11 +450,12 @@ python -m pip install -r requirements.txt</pre>
         <li><b>Bild ↑ / Bild ↓</b>: vorherige / nächste Seite – der Seitenname wird im eigenen Headset angesagt</li>
         <li>Seiten: über <b>＋</b> neue Seite anlegen (leer oder mit Kommando-Vorlage), über <b>⚙</b> umbenennen, verschieben, löschen</li>
         <li>Neue Versionen: Das Soundboard fragt beim Start und alle 12 Stunden bei GitHub nach und zeigt oben einen Hinweis
-          mit Download-Link. Installiert wird nichts automatisch. Abschalten: <code>CHECK_UPDATES = False</code>.</li>
+          mit Download-Link. Installiert wird nichts automatisch. Abschalten: <a class="ext" href="#einstellungen">Einstellungen</a>.</li>
         <li>Lautstärke und „Ordner neu laden“: in der Soundboard-Ansicht. Über 100 % wird verstärkt,
           ein Soft-Limiter verhindert dabei hartes Übersteuern. Leise Sounds werden beim Laden automatisch angehoben.</li>
-        <li>Bedienung vom Handy: in <code>soundboard.py</code> <code>WEB_HOST = "0.0.0.0"</code> setzen, dann
-          <code>http://&lt;PC-IP&gt;:8765</code> im Handy-Browser öffnen</li>
+        <li>Bedienung vom Handy: <a class="ext" href="#einstellungen">Einstellungen</a> → „Erreichbar von“ → <b>Auch vom Handy im Heimnetz</b>,
+          Soundboard neu starten, dann <code>http://&lt;PC-IP&gt;:8765</code> im Handy-Browser öffnen</li>
+        <li>Links: Im Reiter <a class="ext" href="#links">Links</a> legst du Webseiten fest, die die Desktopverknüpfung mit öffnet.</li>
       </ul>
     </div>
 
@@ -1031,16 +1114,243 @@ document.getElementById('reload').addEventListener('click', async () => {
 });
 
 // ---------- Menü ----------
-const views = { board: document.getElementById('viewBoard'), guide: document.getElementById('viewGuide') };
+const views = { board: document.getElementById('viewBoard'), links: document.getElementById('viewLinks'),
+                settings: document.getElementById('viewSettings'), guide: document.getElementById('viewGuide') };
+const HASHES = { '#anleitung': 'guide', '#links': 'links', '#einstellungen': 'settings' };
 function showView() {
-  const v = location.hash === '#anleitung' ? 'guide' : 'board';
+  const v = HASHES[location.hash] || 'board';
   for (const [k, el] of Object.entries(views)) el.hidden = k !== v;
   document.querySelectorAll('.tabs a').forEach(a => a.classList.toggle('active', a.dataset.view === v));
   if (v === 'guide') loadSetup();
+  if (v === 'links') loadLinks();
+  if (v === 'settings') loadSettings();
 }
 window.addEventListener('hashchange', showView);
 document.querySelector('.tabs a[data-view="board"]').addEventListener('click', e => {
   e.preventDefault(); history.pushState('', '', location.pathname); showView();
+});
+const postJSON = (path, obj) => api(path, { body: JSON.stringify(obj), headers: { 'Content-Type': 'application/json' } });
+function showMsg(el, text, cls = '') { el.textContent = text; el.className = 'msg ' + cls; el.hidden = !text; }
+function esc(t) { return String(t ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+// ---------- Links ----------
+let links = null, linksDirty = false;
+const linksEl = document.getElementById('links'), linkMsg = document.getElementById('linkMsg');
+function normUrl(u) {
+  u = (u || '').trim();
+  if (u && !/^[a-z][a-z0-9+.-]*:\/\//i.test(u)) u = /^[a-z][a-z0-9+.-]*:(?!\d)/i.test(u) ? 'x:' + u : 'https://' + u;
+  return u;
+}
+function validUrl(u) {
+  try { const x = new URL(u); return (x.protocol === 'http:' || x.protocol === 'https:') && !!x.host && !/[\s"<>]/.test(u); }
+  catch { return false; }
+}
+async function loadLinks(force = false) {
+  if (links && linksDirty && !force) return renderLinks();
+  try {
+    const r = await fetch('/api/links', { cache: 'no-store' }).then(r => r.json());
+    links = r.links; linksDirty = false;
+    document.getElementById('linkFile').textContent = r.file;
+    renderLinks();
+  } catch (e) { showMsg(linkMsg, 'Links konnten nicht geladen werden: ' + e.message, 'err'); }
+}
+function renderLinks() {
+  const rows = [`<div class="lrow fixed"><span></span><span class="fixname">🔒 <b>Soundboard</b> (diese Oberfläche) – öffnet immer zuerst</span>
+    <label class="start"><input type="checkbox" checked disabled> beim Start</label><span></span><span></span></div>`];
+  links.forEach((l, i) => {
+    const url = normUrl(l.url), ok = !l.url || validUrl(url);
+    rows.push(`<div class="lrow" data-i="${i}">
+      <div class="mv"><button type="button" data-act="up" ${i ? '' : 'disabled'} title="nach oben">▲</button>
+        <button type="button" data-act="down" ${i < links.length - 1 ? '' : 'disabled'} title="nach unten">▼</button></div>
+      <input type="text" data-f="name" placeholder="Name (optional)" maxlength="40" value="${esc(l.name)}">
+      <input type="text" class="lurl${ok ? '' : ' bad'}" data-f="url" placeholder="https://…" value="${esc(l.url)}">
+      <label class="start" title="Beim Start über die Desktopverknüpfung öffnen"><input type="checkbox" data-f="start" ${l.start ? 'checked' : ''}> beim Start</label>
+      ${ok && l.url ? `<a class="icon" href="${esc(url)}" target="_blank" rel="noopener" title="Öffnen">↗</a>` : '<span></span>'}
+      <button type="button" class="icon" data-act="del" title="Entfernen">✕</button></div>`);
+  });
+  if (!links.length) rows.push('<p class="note">Noch keine eigenen Links.</p>');
+  linksEl.innerHTML = rows.join('');
+  document.getElementById('linkSave').disabled = !linksDirty;
+}
+linksEl.addEventListener('input', e => {
+  const row = e.target.closest('.lrow[data-i]'); if (!row) return;
+  const l = links[+row.dataset.i], f = e.target.dataset.f;
+  l[f] = f === 'start' ? e.target.checked : e.target.value;
+  linksDirty = true; document.getElementById('linkSave').disabled = false; showMsg(linkMsg, '');
+  if (f === 'url') e.target.classList.toggle('bad', !!l.url.trim() && !validUrl(normUrl(l.url)));
+});
+linksEl.addEventListener('change', e => { if (e.target.dataset.f === 'url') renderLinks(); });
+linksEl.addEventListener('click', e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const i = +b.closest('.lrow').dataset.i, act = b.dataset.act;
+  if (act === 'del') links.splice(i, 1);
+  else { const j = act === 'up' ? i - 1 : i + 1; [links[i], links[j]] = [links[j], links[i]]; }
+  linksDirty = true; renderLinks();
+});
+document.getElementById('linkAdd').addEventListener('click', () => {
+  links.push({ name: '', url: '', start: false }); linksDirty = true; renderLinks();
+  const inp = linksEl.querySelectorAll('input[data-f="url"]'); inp[inp.length - 1].focus();
+});
+async function saveLinks() {
+  const bad = links.find(l => l.url.trim() && !validUrl(normUrl(l.url)));
+  if (bad) throw new Error(`Ungültige Adresse: ${bad.url} – nur http:// oder https://`);
+  const r = await postJSON('/api/links', { links });
+  links = r.links; linksDirty = false; renderLinks();
+}
+document.getElementById('linkSave').addEventListener('click', async () => {
+  try { await saveLinks(); showMsg(linkMsg, '✓ Gespeichert', 'ok'); }
+  catch (e) { showMsg(linkMsg, e.message, 'err'); }
+});
+document.getElementById('linkOpenAll').addEventListener('click', async () => {
+  try {
+    if (linksDirty) await saveLinks();
+    const r = await api('/api/links/open');
+    showMsg(linkMsg, r.opened ? `${r.opened} Link(s) im Browser des PCs geöffnet.` : 'Keine Links vorhanden.', r.opened ? 'ok' : '');
+  } catch (e) { showMsg(linkMsg, e.message, 'err'); }
+});
+
+// ---------- Einstellungen ----------
+let setInfo = null, setVals = {}, setDirty = false;
+const setEl = document.getElementById('settings'), setMsg = document.getElementById('setMsg');
+const APPLY_NOTE = { audio: 'Ton kurz neu', restart: 'nach Neustart', next: 'ab nächstem Start', reload: 'lädt Sounds neu' };
+const KEYMAP = { ' ': 'space', 'control': 'ctrl', 'altgraph': 'alt gr', 'capslock': 'caps lock', 'arrowup': 'up',
+  'arrowdown': 'down', 'arrowleft': 'left', 'arrowright': 'right', 'escape': 'esc', 'pageup': 'page up',
+  'pagedown': 'page down', 'contextmenu': 'menu', 'meta': 'windows' };
+function fmtVal(it, v) {
+  if (it.type === 'percent') return Math.round(v * 100) + ' %';
+  if (it.type === 'seconds') return String(v.toFixed(2)).replace('.', ',') + ' s';
+  return String(v);
+}
+function sameVal(a, b) { return String(a ?? '') === String(b ?? ''); }
+async function loadSettings(force = false) {
+  if (setInfo && setDirty && !force) return;
+  try {
+    setInfo = await fetch('/api/settings', { cache: 'no-store' }).then(r => r.json());
+    setVals = {}; setDirty = false;
+    for (const g of setInfo.groups) for (const it of g.items) setVals[it.key] = it.value;
+    document.getElementById('setFile').textContent = setInfo.file;
+    renderSettings();
+  } catch (e) { setEl.innerHTML = `<p class="msg err">Einstellungen konnten nicht geladen werden: ${esc(e.message)}</p>`; }
+}
+function options(list, cur) {
+  return list.map(([v, l]) => `<option value="${esc(v)}" ${sameVal(v, cur) ? 'selected' : ''}>${esc(l)}</option>`).join('');
+}
+function control(it) {
+  const v = setVals[it.key], k = it.key;
+  switch (it.type) {
+    case 'bool':
+      return `<label class="start"><input type="checkbox" data-k="${k}" ${v ? 'checked' : ''}> ${v ? 'an' : 'aus'}</label>`;
+    case 'percent': case 'seconds':
+      return `<input type="range" data-k="${k}" min="${it.min}" max="${it.max}" step="${it.step}" value="${v}"><span class="val">${fmtVal(it, v)}</span>`;
+    case 'int':
+      return it.max - it.min <= 40
+        ? `<input type="range" data-k="${k}" min="${it.min}" max="${it.max}" step="1" value="${v}"><span class="val">${v}</span>`
+        : `<input type="number" data-k="${k}" min="${it.min}" max="${it.max}" step="1" value="${v}">`;
+    case 'select':
+      return `<select data-k="${k}">${options(it.options.map(o => [o.value, o.label]), v)}</select>`;
+    case 'device_in': case 'device_out': {
+      const names = setInfo.devices[it.type === 'device_in' ? 'in' : 'out'];
+      const list = it.nodefault ? [] : [['', 'Windows-Standard']];
+      const found = !v || names.some(n => n === v);
+      const hit = !found && names.find(n => n.toLowerCase().includes(String(v).toLowerCase()));
+      if (!found) list.push([v, hit || `${v} – nicht gefunden`]);
+      names.forEach(n => n !== hit && list.push([n, n]));
+      return `<select data-k="${k}">${options(list, v ?? '')}</select>`;
+    }
+    case 'voice': {
+      const list = setInfo.voices.map(x => [x.lang, `${x.lang} – ${x.names.join(', ')}`]);
+      if (!list.some(o => sameVal(o[0], v))) list.unshift([v, `${v}${list.length ? ' (automatisch)' : ''}`]);
+      return `<select data-k="${k}">${options(list, v)}</select>`;
+    }
+    case 'key':
+      return `<input type="text" data-k="${k}" value="${esc(v)}" maxlength="20" style="max-width:9em">
+        <button type="button" class="keybtn" data-key="${k}">Taste drücken …</button>`;
+    default:
+      return `<input type="text" data-k="${k}" value="${esc(v ?? '')}" maxlength="80">`;
+  }
+}
+function renderSettings() {
+  setEl.innerHTML = setInfo.groups.map(g => `<div class="card"><h2>${esc(g.title)}</h2>${g.items.map(it => {
+    const dirty = !sameVal(setVals[it.key], it.value), nondef = !sameVal(setVals[it.key], it.default);
+    const note = APPLY_NOTE[it.apply];
+    return `<div class="set${dirty ? ' dirty' : ''}" data-row="${it.key}">
+      <div class="lbl">${esc(it.label)}${note ? `<span class="badge">${note}</span>` : ''}</div>
+      <div class="ctl">${control(it)}${nondef ? `<button type="button" class="reset" data-reset="${it.key}" title="Standard: ${esc(it.type === 'bool' ? (it.default ? 'an' : 'aus') : it.default == null ? 'Windows-Standard' : fmtVal(it, it.default))}">↺</button>` : ''}</div>
+      ${it.help ? `<p class="help">${esc(it.help)}</p>` : ''}</div>`;
+  }).join('')}</div>`).join('');
+  document.getElementById('setSave').disabled = !setDirty;
+  document.getElementById('setUndo').disabled = !setDirty;
+}
+const itemOf = k => setInfo.groups.flatMap(g => g.items).find(i => i.key === k);
+function setValue(k, v, rerender = true) {
+  const it = itemOf(k);
+  if (['percent', 'seconds'].includes(it.type)) v = parseFloat(v);
+  else if (it.type === 'int') v = parseInt(v, 10);
+  else if (it.type === 'bool') v = !!v;
+  else if (it.type === 'select' && typeof it.options[0].value === 'number') v = Number(v);
+  else if (['device_in', 'device_out', 'text'].includes(it.type) && v === '') v = null;
+  setVals[k] = v;
+  setDirty = Object.keys(setVals).some(x => !sameVal(setVals[x], itemOf(x).value));
+  showMsg(setMsg, '');
+  if (rerender) renderSettings();
+  else {
+    const row = setEl.querySelector(`[data-row="${k}"]`);
+    row.classList.toggle('dirty', !sameVal(v, it.value));
+    const val = row.querySelector('.val'); if (val) val.textContent = fmtVal(it, v);
+    document.getElementById('setSave').disabled = !setDirty;
+    document.getElementById('setUndo').disabled = !setDirty;
+  }
+}
+setEl.addEventListener('input', e => {
+  const k = e.target.dataset.k; if (!k) return;
+  if (e.target.type === 'range') setValue(k, e.target.value, false);
+  else if (e.target.type === 'text' || e.target.type === 'number') setValue(k, e.target.value, false);
+});
+setEl.addEventListener('change', e => {
+  const k = e.target.dataset.k; if (!k) return;
+  setValue(k, e.target.type === 'checkbox' ? e.target.checked : e.target.value);
+});
+let listening = null;
+setEl.addEventListener('click', e => {
+  const r = e.target.closest('[data-reset]');
+  if (r) { const it = itemOf(r.dataset.reset); return setValue(it.key, it.default ?? ''); }
+  const kb = e.target.closest('[data-key]');
+  if (kb) {
+    listening = kb.dataset.key; kb.classList.add('listen'); kb.textContent = 'Jetzt Taste drücken …';
+  }
+});
+window.addEventListener('keydown', e => {
+  if (!listening) return;
+  e.preventDefault(); e.stopPropagation();
+  const k = listening; listening = null;
+  let name = (e.key || '').toLowerCase();
+  if (e.code && e.code.startsWith('Numpad')) { showMsg(setMsg, 'Numpad-Tasten sind für Sounds reserviert – bitte eine andere Taste.', 'err'); return renderSettings(); }
+  name = KEYMAP[name] || name;
+  if (name === 'esc' || name === 'unidentified' || name === 'dead') return renderSettings();
+  setValue(k, name);
+}, true);
+document.getElementById('setUndo').addEventListener('click', () => loadSettings(true));
+document.getElementById('setDefaults').addEventListener('click', () => {
+  for (const g of setInfo.groups) for (const it of g.items) setVals[it.key] = it.default;
+  setDirty = Object.keys(setVals).some(x => !sameVal(setVals[x], itemOf(x).value));
+  renderSettings();
+  showMsg(setMsg, 'Standardwerte eingesetzt – zum Übernehmen „Speichern“ klicken.', 'warn');
+});
+document.getElementById('setSave').addEventListener('click', async () => {
+  const btn = document.getElementById('setSave'); btn.disabled = true;
+  try {
+    const changed = {};
+    for (const [k, v] of Object.entries(setVals)) if (!sameVal(v, itemOf(k).value)) changed[k] = v;
+    const r = await postJSON('/api/settings', { values: changed });
+    setInfo = r; setVals = {}; setDirty = false;
+    for (const g of r.groups) for (const it of g.items) setVals[it.key] = it.value;
+    renderSettings();
+    const res = r.result, parts = ['✓ Gespeichert.'];
+    if (res.restart.length) parts.push(`Bitte das Soundboard neu starten, damit „${res.restart.join('“, „')}“ wirkt.`);
+    if (res.next.length) parts.push(`„${res.next.join('“, „')}“ gilt ab dem nächsten Start.`);
+    showMsg(setMsg, parts.join(' '), res.restart.length ? 'warn' : 'ok');
+    refresh();
+  } catch (e) { showMsg(setMsg, e.message, 'err'); btn.disabled = false; }
 });
 
 // ---------- Update-Hinweis ----------

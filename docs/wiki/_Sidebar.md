@@ -9,6 +9,7 @@
 - [Sounds verwalten](Sounds-verwalten)
 - [Bedienung](Bedienung)
 - [Desktopverknüpfung](Desktopverknuepfung)
+- [Links](Links)
 
 **Referenz**
 - [Einstellungen](Einstellungen)
