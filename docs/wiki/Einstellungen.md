@@ -68,6 +68,7 @@ Gibt es eine neuere Version, erscheint oben in der Oberfläche ein grüner Hinwe
 
 | Option | Standard | Bedeutung |
 |---|---|---|
+| `OPEN_URLS` | Soundboard, n4lab, wardogs.zone | Seiten, die beim Start als Browser-Tabs geöffnet werden; `[]` = keine |
 | `AUTO_QUIT` | `True` | Soundboard beenden, wenn WARDOGS geschlossen wird |
 | `GONE_GRACE` | `20` | Sekunden, die das Spiel weg sein muss |
 | `WAIT_FOR_GAME` | `900` | maximale Wartezeit auf den Spielstart (Steam-Updates) |

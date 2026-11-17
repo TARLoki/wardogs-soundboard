@@ -2,8 +2,9 @@
 WARDOGS + Soundboard - Startskript
 ==================================
 1. Startet das Soundboard (Konsole minimiert, ohne Browser), falls es nicht schon läuft
-2. Startet WARDOGS über Steam (steam://rungameid/...), also mit Anti-Cheat und Updates wie gewohnt
-3. Wartet, bis das Spiel läuft, und beendet das Soundboard, sobald das Spiel geschlossen wurde
+2. Öffnet die Webseiten aus OPEN_URLS im Browser (Soundboard-Oberfläche und Helfer-Seiten)
+3. Startet WARDOGS über Steam (steam://rungameid/...), also mit Anti-Cheat und Updates wie gewohnt
+4. Wartet, bis das Spiel läuft, und beendet das Soundboard, sobald das Spiel geschlossen wurde
 
 Wird über die Desktopverknüpfung mit pythonw.exe gestartet (kein eigenes Fenster).
 Die Verknüpfung legt verknuepfung_anlegen.py an.
@@ -18,6 +19,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+import webbrowser
 from pathlib import Path
 
 # ============================ Konfiguration ============================
@@ -29,6 +31,14 @@ GONE_GRACE = 20               # Spiel muss so lange weg sein, bevor das Soundboa
 AUTO_QUIT = True              # Soundboard beenden, wenn das Spiel geschlossen wird
 PORT = 8765                   # muss zu WEB_PORT in soundboard.py passen
 CONSOLE_TITLE = "WARDOGS Soundboard"
+
+# Diese Seiten werden beim Start im Standard-Browser geöffnet (eine Zeile pro Seite,
+# jeweils in Anführungszeichen und mit Komma). Leere Liste [] = nichts öffnen.
+OPEN_URLS = [
+    f"http://localhost:{PORT}",               # Soundboard-Oberfläche
+    "https://wardogs.n4lab.dev",
+    "https://wardogs.zone/loadouts/base",
+]
 
 # =======================================================================
 
@@ -124,6 +134,16 @@ def game_processes():
             if name.lower().startswith(GAME_PREFIX):
                 names.add(name)
     return sorted(names)
+
+
+def open_pages():
+    for url in OPEN_URLS:
+        try:
+            webbrowser.open_new_tab(url)
+            log(f"Geöffnet: {url}")
+            time.sleep(0.4)                      # Reihenfolge der Tabs beibehalten
+        except Exception as e:
+            log(f"Konnte {url} nicht öffnen: {e}")
 
 
 def start_game():
@@ -260,6 +280,7 @@ def main():
         log("Soundboard startet nicht - Spiel wird trotzdem gestartet. "
             "Zum Prüfen soundboard.py einmal direkt starten.")
 
+    open_pages()
     log("Starte WARDOGS über Steam ...")
     start_game()
 
