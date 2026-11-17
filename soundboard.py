@@ -93,7 +93,7 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 
-VERSION = "2.0"
+VERSION = "2.0.2"
 
 # ============================ Konfiguration ============================
 
