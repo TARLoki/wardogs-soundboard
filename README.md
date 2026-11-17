@@ -9,6 +9,8 @@ A soundboard for the proximity voice chat in **WARDOGS** (Bulkhead) – meme sou
 
 **[⬇ Download (neueste Version / latest release)](https://github.com/TARLoki/wardogs-soundboard/releases/latest)** · **[📖 Wiki](https://github.com/TARLoki/wardogs-soundboard/wiki)**
 
+> **Neu in 2.1 / New in 2.1:** Reiter **Einstellungen** (Mikrofon, Sprechtaste, Lautstärken per Auswahlfeld) und **Links** (Webseiten, die die Desktopverknüpfung mit öffnet) – beides bleibt bei Updates erhalten. / **Settings** and **Links** tabs – both kept across updates.
+
 ---
 
 ## Deutsch
@@ -46,8 +48,15 @@ Das Spiel wird **nicht verändert** – keine Dateien, kein Speicherzugriff. Das
 2. Python installieren, dann im Ordner: `python -m pip install -r requirements.txt`
 3. VB-Cable installieren (als Administrator) und **neu starten**; in `mmsys.cpl` dein Headset bzw. Mikrofon wieder als Standard setzen
 4. `start.bat` starten – der Browser öffnet die Oberfläche, der Einrichtungs-Check sollte überall grün sein
-5. In WARDOGS als Mikrofon **CABLE Output (VB-Audio Virtual Cable)** wählen
-6. Auf eine Kachel klicken, Myinstants-Link einfügen, speichern – fertig
+5. Optional im Reiter **Einstellungen** dein Mikrofon und deine Sprechtaste wählen (Standard: Windows-Standardmikrofon und `K`)
+6. In WARDOGS als Mikrofon **CABLE Output (VB-Audio Virtual Cable)** wählen
+7. Auf eine Kachel klicken, Myinstants-Link einfügen, speichern – fertig
+
+<p align="center"><img src="docs/images/einstellungen.png" width="460" alt="Reiter Einstellungen"></p>
+
+### Aktualisieren
+
+ZIP der neuen Version laden („Zulassen“ nicht vergessen), Soundboard beenden und die Programmdateien in deinen Ordner kopieren. **Den Ordner `sounds` nicht überschreiben** – dort liegen deine Seiten, Sounds, Bilder sowie `settings.json` (Einstellungen) und `links.json` (Links).
 
 📖 **Ausführliche Hilfe im [Wiki](https://github.com/TARLoki/wardogs-soundboard/wiki)** – Installation, Einstellungen, Fehlerbehebung, FAQ.
 📄 Anleitung zum Ausdrucken: [docs/WARDOGS-Soundboard-Anleitung.docx](docs/WARDOGS-Soundboard-Anleitung.docx) – oder in der Oberfläche unter **Anleitung**.
@@ -96,8 +105,13 @@ The game is **not modified** – no file or memory access. The soundboard mixes 
 2. Install Python, then in that folder: `python -m pip install -r requirements.txt`
 3. Install VB-Cable (as administrator) and **reboot**; in `mmsys.cpl` set your headset and microphone back as default devices
 4. Run `start.bat` – the browser opens the interface, the setup check should be all green
-5. In WARDOGS, select **CABLE Output (VB-Audio Virtual Cable)** as microphone
-6. Click a tile, paste a Myinstants link, save – done
+5. Optionally pick your microphone and push-to-talk key in the **Einstellungen** (settings) tab (default: Windows default mic and `K`)
+6. In WARDOGS, select **CABLE Output (VB-Audio Virtual Cable)** as microphone
+7. Click a tile, paste a Myinstants link, save – done
+
+### Updating
+
+Download the new ZIP (unblock it), close the soundboard and copy the program files into your folder. **Do not overwrite the `sounds` folder** – it holds your pages, sounds, images, `settings.json` and `links.json`.
 
 ### Important
 
