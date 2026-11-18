@@ -92,27 +92,50 @@ def minimize_console():
     return False
 
 
+# Kleiner Vorspann, der im Soundboard-Prozess läuft: Fehlermeldungen (stderr) gehen weiter
+# in die Konsole UND in soundboard_fehler.log. Die Umleitung passiert bewusst im Kindprozess –
+# leitet das Startskript selbst um, bekommt das Soundboard unter pythonw keine gültige Konsole.
+WRAPPER = r"""
+import sys, runpy
+log_path, script = sys.argv[1], sys.argv[2]
+class Tee:
+    def __init__(self, *files):
+        self.files = [f for f in files if f is not None]
+    def write(self, text):
+        for f in self.files:
+            try:
+                f.write(text); f.flush()
+            except Exception:
+                pass
+        return len(text)
+    def flush(self):
+        pass
+    def __getattr__(self, name):
+        return getattr(self.files[0], name)
+try:
+    sys.stderr = Tee(sys.__stderr__, open(log_path, "w", encoding="utf-8"))
+except Exception:
+    pass
+sys.argv = [script] + sys.argv[3:]
+runpy.run_path(script, run_name="__main__")
+"""
+
+
 def start_soundboard() -> bool:
     si = subprocess.STARTUPINFO()
     si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     si.wShowWindow = 7                           # SW_SHOWMINNOACTIVE
-    # Fehlermeldungen (stderr) in eine Datei, damit ein Absturz nachvollziehbar bleibt –
-    # das Konsolenfenster schließt sich dabei ja sofort. Normale Ausgaben bleiben in der Konsole.
     try:
-        err = ERR_LOG.open("w", encoding="utf-8")
+        ERR_LOG.unlink(missing_ok=True)          # alte Meldung nicht für neue halten
     except Exception:
-        err = None                               # z. B. Datei noch von altem Prozess belegt
-    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1")
+        pass
     try:
-        proc = subprocess.Popen([python_exe(), str(BASE / "soundboard.py"), "--no-browser"],
-                                cwd=str(BASE), creationflags=subprocess.CREATE_NEW_CONSOLE,
-                                startupinfo=si, stderr=err, env=env)
+        proc = subprocess.Popen([python_exe(), "-c", WRAPPER, str(ERR_LOG), str(BASE / "soundboard.py"),
+                                 "--no-browser"],
+                                cwd=str(BASE), creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=si)
     except Exception as e:
         log(f"Python konnte nicht gestartet werden: {e}")
         return False
-    finally:
-        if err:
-            err.close()
     if not minimize_console():
         log("Hinweis: Konsolenfenster nicht gefunden, konnte es nicht minimieren.")
     for _ in range(60):                          # bis zu 30 s auf die Weboberfläche warten
