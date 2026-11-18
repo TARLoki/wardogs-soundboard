@@ -19,6 +19,6 @@ Die Oberfläche erreichst du über dein Lesezeichen `http://localhost:8765`.
 
 ## Protokoll
 
-Jeder Start schreibt `launcher.log` in den Soundboard-Ordner: ob das Soundboard gestartet wurde, welche WARDOGS-Prozesse erkannt wurden und wann beendet wurde. Wurde der Ordner verschoben, die Verknüpfung neu anlegen.
+Jeder Start schreibt `launcher.log` in den Soundboard-Ordner: ob das Soundboard gestartet wurde, welche WARDOGS-Prozesse erkannt wurden und wann beendet wurde. Stürzt das Soundboard beim Start ab, stehen dort Fehler, Stelle und ein Tipp; die vollständige Meldung liegt in `soundboard_fehler.log`. Ein versehentlicher Doppelklick startet das Ganze nur einmal. Wurde der Ordner verschoben, die Verknüpfung neu anlegen.
 
 Hast du im Reiter **Einstellungen** einen anderen Port gewählt, übernimmt die Verknüpfung ihn automatisch. Weitere Optionen stehen oben in `wardogs_start.pyw` (siehe [Einstellungen](Einstellungen#für-fortgeschrittene)).

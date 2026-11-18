@@ -98,7 +98,7 @@ import numpy as np
 import sounddevice as sd
 import soundfile as sf
 
-VERSION = "2.1"
+VERSION = "2.1.1"
 
 # ============================ Konfiguration ============================
 # Standardwerte. Fast alles lässt sich bequemer im Reiter „Einstellungen“ der

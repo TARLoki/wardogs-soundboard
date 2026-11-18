@@ -2,6 +2,8 @@
 sounds/*
 !sounds/.keep
 launcher.log
+soundboard_fehler.log
+*.bak
 
 # Python
 __pycache__/

@@ -10,7 +10,8 @@ WARDOGS + Soundboard - Startskript
 Wird über die Desktopverknüpfung mit pythonw.exe gestartet (kein eigenes Fenster).
 Die Verknüpfung legt verknuepfung_anlegen.py an.
 
-Protokoll jedes Starts: launcher.log im selben Ordner.
+Protokoll jedes Starts: launcher.log im selben Ordner. Stürzt das Soundboard beim Start ab,
+landet die Fehlermeldung in soundboard_fehler.log und zusammengefasst auch in launcher.log.
 """
 
 import ctypes
@@ -41,6 +42,7 @@ OPEN_SOUNDBOARD = True        # Soundboard-Oberfläche im Browser öffnen
 BASE = Path(__file__).resolve().parent
 SOUND_DIR = BASE / "sounds"
 LOG = BASE / "launcher.log"
+ERR_LOG = BASE / "soundboard_fehler.log"
 NO_WINDOW = 0x08000000        # CREATE_NO_WINDOW
 SHORTCUT_NAME = "WARDOGS + Soundboard.lnk"
 
@@ -94,15 +96,79 @@ def start_soundboard() -> bool:
     si = subprocess.STARTUPINFO()
     si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     si.wShowWindow = 7                           # SW_SHOWMINNOACTIVE
-    subprocess.Popen([python_exe(), str(BASE / "soundboard.py"), "--no-browser"],
-                     cwd=str(BASE), creationflags=subprocess.CREATE_NEW_CONSOLE, startupinfo=si)
+    # Fehlermeldungen (stderr) in eine Datei, damit ein Absturz nachvollziehbar bleibt –
+    # das Konsolenfenster schließt sich dabei ja sofort. Normale Ausgaben bleiben in der Konsole.
+    try:
+        err = ERR_LOG.open("w", encoding="utf-8")
+    except Exception:
+        err = None                               # z. B. Datei noch von altem Prozess belegt
+    env = dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUNBUFFERED="1")
+    try:
+        proc = subprocess.Popen([python_exe(), str(BASE / "soundboard.py"), "--no-browser"],
+                                cwd=str(BASE), creationflags=subprocess.CREATE_NEW_CONSOLE,
+                                startupinfo=si, stderr=err, env=env)
+    except Exception as e:
+        log(f"Python konnte nicht gestartet werden: {e}")
+        return False
+    finally:
+        if err:
+            err.close()
     if not minimize_console():
         log("Hinweis: Konsolenfenster nicht gefunden, konnte es nicht minimieren.")
     for _ in range(60):                          # bis zu 30 s auf die Weboberfläche warten
         if soundboard_running():
             return True
+        if proc.poll() is not None:              # Prozess schon beendet -> abgestürzt
+            time.sleep(0.3)
+            report_crash(proc.returncode)
+            return False
         time.sleep(0.5)
+    log("Soundboard antwortet nach 30 Sekunden noch nicht.")
+    report_crash(None)
     return False
+
+
+def report_crash(code):
+    """Die wichtigsten Zeilen aus soundboard_fehler.log ins launcher.log übernehmen."""
+    try:
+        text = ERR_LOG.read_text(encoding="utf-8", errors="replace").strip()
+    except Exception:
+        text = ""
+    if code is not None:
+        log(f"Soundboard hat sich sofort beendet (Code {code}).")
+    if not text:
+        return
+    lines = [l for l in text.splitlines() if l.strip()]
+    where = [l.strip() for l in lines if l.strip().startswith('File "')]
+    log("Fehler: " + lines[-1].strip())
+    if where:
+        log("Stelle: " + where[-1])
+    hint = crash_hint(lines[-1])
+    if hint:
+        log("Tipp: " + hint)
+    log(f"Vollständige Meldung: {ERR_LOG.name}")
+
+
+def crash_hint(last: str) -> str:
+    if last.startswith(("NameError", "SyntaxError", "IndentationError")):
+        return ("In soundboard.py stimmt etwas nicht (z. B. eine geänderte oder gelöschte Zeile). "
+                "soundboard.py neu aus der ZIP kopieren und Mikrofon, Sprechtaste usw. im Reiter "
+                "„Einstellungen“ festlegen – die bleiben erhalten.")
+    if last.startswith("ModuleNotFoundError"):
+        return "Pakete fehlen: im Soundboard-Ordner python -m pip install -r requirements.txt ausführen."
+    if "address already in use" in last.lower() or "10048" in last:
+        return "Der Port ist belegt. Läuft das Soundboard schon? Sonst im Reiter „Einstellungen“ einen anderen Port wählen."
+    return ""
+
+
+def single_instance() -> bool:
+    """Doppelklick-Schutz: nur ein Startskript gleichzeitig."""
+    global _MUTEX
+    try:
+        _MUTEX = ctypes.windll.kernel32.CreateMutexW(None, False, "WARDOGS-Soundboard-Launcher")
+        return ctypes.windll.kernel32.GetLastError() != 183      # ERROR_ALREADY_EXISTS
+    except Exception:
+        return True
 
 
 def quit_soundboard():
@@ -295,6 +361,8 @@ def main():
         install_shortcut()
         return
 
+    if not single_instance():
+        return                                   # läuft schon (Verknüpfung doppelt angeklickt)
     try:
         LOG.write_text("", encoding="utf-8")     # Protokoll pro Start neu
     except Exception:
@@ -307,8 +375,7 @@ def main():
     elif start_soundboard():
         log("Soundboard gestartet (minimiert).")
     else:
-        log("Soundboard startet nicht - Spiel wird trotzdem gestartet. "
-            "Zum Prüfen soundboard.py einmal direkt starten.")
+        log("Soundboard startet nicht - Spiel wird trotzdem gestartet.")
 
     open_pages()
     log("Starte WARDOGS über Steam ...")

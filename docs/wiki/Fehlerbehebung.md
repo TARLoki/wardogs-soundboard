@@ -17,7 +17,7 @@ Erste Anlaufstelle: der **Einrichtungs-Check** unter **Anleitung** in der Oberfl
 | Echo, Pfeifen, ganzer PC-Ton im Mikrofon | `mmsys.cpl`: CABLE darf weder Standard-Wiedergabe- noch Standard-Aufnahmegerät sein. |
 | Sounds werden doppelt abgespielt | Beim Mikrofontest im Spiel normal. Sonst prüfen, ob zwei Soundboard-Fenster offen sind (ab 1.8 verhindert). |
 | Langer Sound wird abgeschnitten | Grenze ist 90 Sekunden – `MAX_SECONDS` erhöhen. |
-| Desktopverknüpfung startet das Soundboard nicht | `launcher.log` ansehen; `python soundboard.py` einmal direkt starten. Wurde der Ordner verschoben, Verknüpfung neu anlegen. |
+| Desktopverknüpfung startet das Soundboard nicht | `launcher.log` ansehen (Zeilen „Fehler“ und „Tipp“, Details in `soundboard_fehler.log`); `python soundboard.py` einmal direkt starten. Wurde der Ordner verschoben, Verknüpfung neu anlegen. |
 | Bild-Link: „zeigt nicht direkt auf ein Bild“ | Rechtsklick auf das Bild → „Bildadresse kopieren“ und diese verwenden – oder das Bild kopieren und im Dialog mit Strg+V einfügen. |
 | Bild ↑/↓ löst im Spiel etwas aus | Tasten in WARDOGS neu belegen oder `PAGE_KEYS = False` setzen und die Seite in der Oberfläche wechseln. |
 | „Aufnahme nicht möglich: Mikrofon läuft nicht“ | Im Einrichtungs-Check muss „Mikrofon gefunden“ grün sein (Schritt 5). |
